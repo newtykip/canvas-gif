@@ -2,6 +2,7 @@
 	"name": "canvas-gif",
 	"author": "newtykins",
 	"repository": "https://github.com/newtykins/canvas-gif",
+	"description": "Manipulate GIFs easily using node-canvas!",
 	"version": "1.0.0",
 	"main": "index.js",
 	"types": "index.d.ts",
@@ -16,5 +17,14 @@
 		"@types/gm": "^1.18.10",
 		"@types/node": "^16.4.11",
 		"typescript": "^4.3.5"
-	}
+	},
+	"keywords": [
+		"canvas",
+		"gif",
+		"encode",
+		"decode",
+		"node-canvas",
+		"image-editing",
+		"graphicsmagick"
+	]
 }

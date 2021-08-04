@@ -1,4 +1,5 @@
 import { NodeCanvasRenderingContext2D } from 'canvas';
+import GIFEncoder from 'gif-encoder-2';
 
 export namespace CanvasGif {
 	export type EditFrame = (
@@ -6,9 +7,10 @@ export namespace CanvasGif {
 		width: number,
 		height: number,
 		totalFrames: number,
-		currentFrame: number
+		currentFrame: number,
+		encoder: GIFEncoder
 	) => any;
-	export type Algorithm = 'nequant' | 'octree';
+	export type Algorithm = 'neuquant' | 'octree';
 
 	export interface Options {
 		coalesce?: boolean;
@@ -16,6 +18,8 @@ export namespace CanvasGif {
 		repeat?: number;
 		algorithm?: Algorithm;
 		optimiser?: boolean;
+		fps?: number;
+		quality?: number;
 	}
 }
 
