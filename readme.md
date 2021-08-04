@@ -1,12 +1,12 @@
 <div align="center">
-    <img src="example/output.gif" height="250">
+    <img src="examples/output1.gif" height="250"><br>
     <h1>canvas-gif</h1>
 	<h3><code>npm i canvas-gif</code></h3> 
 </div>
 
 ### What is canvas-gif?
 
-canvas-gif is an NPM library that allows you to manipulate the frames of GIFs using [node-canvas]().
+canvas-gif is an NPM library that allows you to manipulate the frames of GIFs using [node-canvas](https://github.com/Automattic/node-canvas).
 
 ### How does it work?
 
@@ -28,7 +28,19 @@ You can download it using npm by running
 npm i canvas-gif
 ```
 
-And you can then proceed to use it in your code. For an example of how to do so, please check out the [examples](examples) folder.
+And you can then proceed to use it in your code. For an example of how to do so, please check out the [example](example) folder.
+
+### Options
+
+All of these options are optional! _wow_
+
+- **coalesce** - Whether the GIF should be coalesced by GraphicsMagick before being processed by the engine. Requires GraphicsMagick to be installed - if it is not and the option is true and error will be thrown and the code will continue with the original file buffer. Defaults to **false**
+- **delay** - The amount of delay between each frame in ms. Defaults to **0**
+- **repeat** - How many times the GIF should repeat. If the value is 0, it will repeat forever. Defaults to **0**
+- **algorithm** - The algorithm the encoder should use. Can be one of **neuquant** and **octree**. Defaults to **neuquant**
+- **optimiser** - Whether the encoder should use its in-built optimiser. Defaults to **false**
+- **fps** - The amount of frames to render per second. Defaults to **60**
+- **quality** - The quality of the GIF. A value between 1-100. The higher the number, the better quality the GIF will be. Defaults to **100**
 
 ### Common Errors
 

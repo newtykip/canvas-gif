@@ -42,8 +42,17 @@ function coalesce(input) {
 module.exports = async function canvasGif(input, editFrame, options) {
 	var buffer;
 
+	// Parse options
+	const coalesceEnabled = options && options.coalesce; 
+	var algorithm = options && options.algorithm ? options.algorithm.toLowerCase() : 'neuquant';
+	const optimiserEnabled = options && options.optimiserEnabled;
+	const delay = options && options.delay ? options.delay : 0;
+	const repeat = options && options.repeat ? options.repeat : 0;
+	const fps = options && options.fps ? options.fps : 60;
+	const quality = options && options.quality ? options.quality / 100 : 1;
+
 	// Get the buffer from the input
-	if (options.coalesce) {
+	if (coalesceEnabled) {
 		await coalesce(input)
 			.then(res => {
 				buffer = res;
@@ -56,13 +65,21 @@ module.exports = async function canvasGif(input, editFrame, options) {
 		buffer = typeof input === 'string' ? fs.readFileSync(input) : input;
 	}
 
+	// Validate the algorithm
+	if (!['neuquant', 'octree'].includes(algorithm)) {
+		console.error(new Error(`${algorithm} is not a valid algorithm! Using neuquant as a substitute.`));
+		algorithm = 'neuquant';
+	}
+
 	// Decode the gif and begin the encoder
 	const { width, height, frames } = decodeGif(buffer);
-	const encoder = new GIFEncoder(width, height, options.algorithm ?? 'nequant', options.optimiser ?? false, frames.length);
+	const encoder = new GIFEncoder(width, height, algorithm, optimiserEnabled, frames.length);
 
 	encoder.on('readable', () => encoder.read());
-	encoder.setDelay(options.delay ?? 0);
-	encoder.setRepeat(options.repeat ?? 0);
+	encoder.setDelay(delay);
+	encoder.setRepeat(repeat);
+	encoder.setFrameRate(fps);
+	encoder.setQuality(quality);
 	encoder.start();
 
 	// Render each frame and add it to the encoder
@@ -78,7 +95,7 @@ module.exports = async function canvasGif(input, editFrame, options) {
 		ctx.putImageData(data, 0, 0);
 
 		// Run the user's custom edit function, and add the frame
-		editFrame(ctx, width, height, frames.length, parseInt(i) + 1);
+		editFrame(ctx, width, height, frames.length, parseInt(i) + 1, encoder);
 		encoder.addFrame(ctx);
 	}
 
