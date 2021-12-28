@@ -17,7 +17,7 @@
     semver "^7.3.4"
     tar "^6.1.0"
 
-"@types/gm@^1.18.10":
+"@types/gm@1.18.10":
   version "1.18.10"
   resolved "https://registry.yarnpkg.com/@types/gm/-/gm-1.18.10.tgz#9b45819651f8e71c0b5f79ec9872ea52ce8ee2d0"
   integrity sha512-dY1rQuNFzu94j1dsIaNEJiT1x8AUhgZMlvmyuyMrmRR5X4u6Ammv/1xwjMSyRFDa/rq/A+FIViJc983FRwy6wQ==
@@ -29,7 +29,7 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.4.12.tgz#961e3091f263e6345d2d84afab4e047a60b4b11b"
   integrity sha512-zxrTNFl9Z8boMJXs6ieqZP0wAhvkdzmHSxTlJabM16cf5G9xBc1uPRH5Bbv2omEDDiM8MzTfqTJXBf0Ba4xFWA==
 
-"@types/node@^16.4.11":
+"@types/node@16.4.11":
   version "16.4.11"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.4.11.tgz#245030af802c776c31f00eb0cdde40ee615db462"
   integrity sha512-nWSFUbuNiPKJEe1IViuodSI+9cM+vpM8SWF/O6dJK7wmGRNq55U7XavJHrlRrPkSMuUZUFzg1xaZ1B+ZZCrRWw==
@@ -518,7 +518,7 @@ tar@^6.1.0:
     mkdirp "^1.0.3"
     yallist "^4.0.0"
 
-typescript@^4.3.5:
+typescript@4.3.5:
   version "4.3.5"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.3.5.tgz#4d1c37cc16e893973c45a06886b7113234f119f4"
   integrity sha512-DqQgihaQ9cUrskJo9kIyW/+g0Vxsk8cDtZ52a3NGh0YNTfpUSArXSohyUGnvbPazEPLu398C0UxmKSOrPumUzA==
