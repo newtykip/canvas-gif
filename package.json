@@ -14,7 +14,7 @@
 		"gm": "^1.23.1"
 	},
 	"devDependencies": {
-		"@types/gm": "1.18.10",
+		"@types/gm": "1.18.11",
 		"@types/node": "16.4.11",
 		"typescript": "4.3.5"
 	},
