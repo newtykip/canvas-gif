@@ -36,13 +36,13 @@ And you can then proceed to use it in your code. For an example of how to do so,
 
 All of these options are optional! _wow_
 
-- **coalesce** - Whether the GIF should be coalesced by GraphicsMagick before being processed by the engine. Requires GraphicsMagick to be installed - if it is not and the option is true and error will be thrown and the code will continue with the original file buffer. Defaults to **false**
-- **delay** - The amount of delay between each frame in ms. Defaults to **0**
-- **repeat** - How many times the GIF should repeat. If the value is 0, it will repeat forever. Defaults to **0**
-- **algorithm** - The algorithm the encoder should use. Can be one of **neuquant** and **octree**. Defaults to **neuquant**
-- **optimiser** - Whether the encoder should use its in-built optimiser. Defaults to **false**
-- **fps** - The amount of frames to render per second. Defaults to **60**
-- **quality** - The quality of the GIF. A value between 1-100. The higher the number, the better quality the GIF will be. Defaults to **100**
+-   **coalesce** - Whether the GIF should be coalesced by GraphicsMagick before being processed by the engine. Requires GraphicsMagick to be installed - if it is not and the option is true and error will be thrown and the code will continue with the original file buffer. Defaults to **false**
+-   **delay** - The amount of delay between each frame in ms. Defaults to **0**
+-   **repeat** - How many times the GIF should repeat. If the value is 0, it will repeat forever. Defaults to **0**
+-   **algorithm** - The algorithm the encoder should use. Can be one of **neuquant** and **octree**. Defaults to **neuquant**
+-   **optimiser** - Whether the encoder should use its in-built optimiser. Defaults to **false**
+-   **fps** - The amount of frames to render per second. Defaults to **60**
+-   **quality** - The quality of the GIF. A value between 1-100. The higher the number, the better quality the GIF will be. Defaults to **100**
 
 ### Common Errors
 
@@ -51,3 +51,7 @@ All of these options are optional! _wow_
 This error happens if the coalescing option is enabled but you are missing GraphicsMagick. Please install it from [here](http://www.graphicsmagick.org/download.html) and if the error persists feel free to report it as a problem and I'll try my best to help!
 
 <sub>See the code's license <a href="license.md">here.</sub>
+
+### To-do
+
+-   Return emitter for easy event handling

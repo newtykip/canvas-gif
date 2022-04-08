@@ -1,1 +1,7 @@
 examples
+src
+.vscode
+.prettierrc
+gulpfile.js
+pnpm-lock.yaml
+tsconfig.json
