@@ -1,7 +1,8 @@
-import canvasGif from '../index';
+import canvasGif from '../dist/index';
 import fs from 'fs';
+import path from 'path';
 
-const file = fs.readFileSync('./input2.gif');
+const file = fs.readFileSync(path.resolve(__dirname, 'input2.gif'));
 
 canvasGif(
 	file,
@@ -17,7 +18,7 @@ canvasGif(
 		console.log(`Rendered frame ${currentFrame}`);
 	},
 	{
-		coalesce: true, // whether the gif should be coalesced first, default: false
+		coalesce: true, // whether the gif should be coalesced first (requires graphicsmagick), default: false
 		delay: 0, // the delay between each frame in ms, default: 0
 		repeat: 1, // how many times the GIF should repeat, default: 0 (runs forever)
 		algorithm: 'neuquant', // the algorithm the encoder should use, default: 'neuquant',
@@ -25,4 +26,6 @@ canvasGif(
 		fps: 1, // the amount of frames to render per second, default: 60
 		quality: 10, // the quality of the gif, a value between 1 and 100, default: 100
 	}
-).then((buffer) => fs.writeFileSync('./output2.gif', buffer));
+).then((buffer) =>
+	fs.writeFileSync(path.resolve(__dirname, 'output2.gif'), buffer)
+);
