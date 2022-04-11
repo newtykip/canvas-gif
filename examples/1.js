@@ -26,7 +26,7 @@ canvasGif(
 		delay: 0, // the delay between each frame in ms, default: 0
 		repeat: 0, // how many times the GIF should repeat, default: 0 (runs forever)
 		algorithm: 'octree', // the algorithm the encoder should use, default: 'neuquant',
-		optimiser: true, // whether the encoder should use the in-built optimiser, default: false,
+		optimiser: true, // whether the encoder should use the in-built optimiser, default: true,
 		fps: 60, // the amount of frames to render per second, default: 60
 		quality: 100, // the quality of the gif, a value between 1 and 100, default: 100
 	}

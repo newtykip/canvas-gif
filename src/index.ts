@@ -1,41 +1,8 @@
-import gm from 'gm';
 import decodeGif from 'decode-gif';
 import fs from 'fs';
 import { createCanvas, createImageData } from 'canvas';
 import GIFEncoder from 'gif-encoder-2';
-
-/**
- * Coalesces a GIF using GraphicsMagick
- * @param input The GIF to coalesce
- * @returns A buffer of the coalesced GIF
- */
-function coalesce(input: string | Buffer) {
-	var coalesced: Buffer = null;
-	var error: Error;
-
-	// Coalesce the input GIF
-	gm(input)
-		.coalesce()
-		.toBuffer(async (err, buffer) => {
-			if (err) error = err;
-			coalesced = buffer ? buffer : undefined;
-		});
-
-	// Promise a coalesced Buffer
-	return new Promise<Buffer>(waitForCoalesced);
-
-	// Ensure that the coalesced Buffer is resolved
-	function waitForCoalesced(resolve: Function, reject: Function) {
-		if (coalesced && coalesced.length > 0) resolve(coalesced);
-		else if (coalesced === undefined)
-			reject(
-				new Error(
-					`There was an error during coalescing: ${error.message}. Reverting to file buffer!`
-				)
-			);
-		else setTimeout(waitForCoalesced.bind(this, resolve, reject), 30);
-	}
-}
+import parseBuffer from './parseBuffer';
 
 type EditFrame = (
 	ctx: CanvasRenderingContext2D,
@@ -68,79 +35,46 @@ interface Options {
 export = async function canvasGif(
 	input: string | Buffer,
 	editFrame: EditFrame,
-	options: Options
+	options?: Options
 ) {
-	var bufferToEdit: Buffer;
-
-	// Parse options
-	const coalesceEnabled = options?.coalesce ?? false;
-	var algorithm: Algorithm =
-		(options?.algorithm?.toLowerCase() as Algorithm) ?? 'neuquant';
-	const optimiserEnabled = options?.optimiser ?? false;
-	const delay = options?.delay ?? 0;
-	const repeat = options?.repeat ?? 0;
-	const fps = options?.fps ?? 60;
-	const quality = options?.quality / 100 ?? 1;
-
-	// Get the buffer from the input
-	if (coalesceEnabled) {
-		await coalesce(input)
-			.then((res) => {
-				bufferToEdit = res;
-			})
-			.catch((err) => {
-				console.log(err);
-				bufferToEdit =
-					typeof input === 'string' ? fs.readFileSync(input) : input;
-			});
-	} else {
-		bufferToEdit =
-			typeof input === 'string' ? fs.readFileSync(input) : input;
-	}
-
-	// Validate the algorithm
-	if (!['neuquant', 'octree'].includes(algorithm)) {
-		console.error(
-			new Error(
-				`${algorithm} is not a valid algorithm! Using neuquant as a substitute.`
-			)
-		);
-		algorithm = 'neuquant';
-	}
+	const buffer = await parseBuffer(
+		typeof input === 'string' ? fs.readFileSync(input) : input,
+		options?.coalesce
+	);
 
 	// Decode the gif and begin the encoder
-	const { width, height, frames } = decodeGif(bufferToEdit);
-	const encoder = new GIFEncoder(
+	const { width, height, frames } = decodeGif(buffer);
+
+	const gif = new GIFEncoder(
 		width,
 		height,
-		algorithm,
-		optimiserEnabled,
+		options?.algorithm.toLowerCase() ?? 'neququant',
+		options?.optimiser ?? true,
 		frames.length
 	);
 
-	encoder.on('readable', () => encoder.read());
-	encoder.setDelay(delay);
-	encoder.setRepeat(repeat);
-	encoder.setFrameRate(fps);
-	encoder.setQuality(quality);
-	encoder.start();
+	gif.on('readable', () => gif.read());
+	gif.setDelay(options?.delay ?? 0);
+	gif.setRepeat(options?.repeat ?? 0);
+	gif.setFrameRate(options?.fps ?? 60);
+	gif.setQuality(options?.quality / 100 ?? 1);
+	gif.start();
 
 	// Render each frame and add it to the encoder
-	frames.forEach((frame, i) => {
-		// Create the frame's canvas
+	for (let currentFrame = 1; currentFrame <= frames.length; currentFrame++) {
+		const { data: frameData } = frames[currentFrame - 1];
 		const canvas = createCanvas(width, height);
 		const ctx = canvas.getContext('2d');
+		const frame = createImageData(frameData, width, height);
 
-		// Create image data from the frame's data and put it on the canvas
-		const data = createImageData(frame.data, width, height);
-		ctx.putImageData(data, 0, 0);
+		ctx.putImageData(frame, 0, 0);
+		editFrame(ctx, width, height, frames.length, currentFrame, gif);
 
-		// Run the user's custom edit function, and add the frame
-		editFrame(ctx, width, height, frames.length, i + 1, encoder);
-		encoder.addFrame(ctx);
-	});
+		gif.addFrame(ctx);
+	}
 
 	// Finish encoding and return the result
-	encoder.finish();
-	return encoder.out.getData() as Buffer;
+	gif.finish();
+
+	return gif.out.getData() as Buffer;
 };
