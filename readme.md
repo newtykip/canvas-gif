@@ -51,7 +51,3 @@ All of these options are optional! _wow_
 This error happens if the coalescing option is enabled but you are missing GraphicsMagick. Please install it from [here](http://www.graphicsmagick.org/download.html) and if the error persists feel free to report it as a problem and I'll try my best to help!
 
 <sub>See the code's license <a href="license.md">here.</sub>
-
-### To-do
-
--   Return emitter for easy event handling

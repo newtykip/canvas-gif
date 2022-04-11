@@ -13,7 +13,9 @@ export default async function parseBuffer(
 			.toBuffer((error, buffer) => {
 				if (error)
 					reject(
-						`There was an error during coalescing: ${error}. Reverting buffer to file buffer!`
+						new Error(
+							`There was an error during coalescing: ${error}. Reverting buffer to file buffer!`
+						)
 					);
 				else resolve(buffer);
 			});

@@ -1,12 +1,14 @@
+import { performance } from 'perf_hooks';
 import canvasGif from '../dist/index';
 import fs from 'fs';
 import path from 'path';
 
+const startTime = performance.now();
 const file = fs.readFileSync(path.resolve(__dirname, 'input2.gif'));
 
 canvasGif(
 	file,
-	(ctx, width, height, totalFrames, currentFrame) => {
+	(ctx, { width, height, totalFrames, currentFrame }) => {
 		ctx.fillStyle = 'black'; // Change the fill colour to black
 		ctx.font = '20px "Operator Mono Bold"'; // Change the font
 		ctx.fillRect(5, 70, 350, 50); // Put a black rectange behind the frames and text
@@ -15,6 +17,7 @@ canvasGif(
 		ctx.fillText('en movil 1080p 👀', 10, 100); // Draw funny text
 		ctx.fillText(`${currentFrame}/${totalFrames}`, 250, 100); // Frame text
 		ctx.fillText(`${width}x${height}`, 10, 200); // Dimensions text
+
 		console.log(`Rendered frame ${currentFrame}`);
 	},
 	{
@@ -26,6 +29,9 @@ canvasGif(
 		fps: 1, // the amount of frames to render per second, default: 60
 		quality: 10, // the quality of the gif, a value between 1 and 100, default: 100
 	}
-).then((buffer) =>
-	fs.writeFileSync(path.resolve(__dirname, 'output2.gif'), buffer)
-);
+).then((buffer) => {
+	const endTime = performance.now();
+	console.log(`Finished in ${endTime - startTime}ms!`);
+
+	fs.writeFileSync(path.resolve(__dirname, 'output2.gif'), buffer);
+});
