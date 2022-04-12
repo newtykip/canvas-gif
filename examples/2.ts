@@ -1,10 +1,10 @@
 import { performance } from 'perf_hooks';
-import canvasGif from '../dist/index';
+import canvasGif from '../dist';
 import fs from 'fs';
 import path from 'path';
 
-const startTime = performance.now();
 const file = fs.readFileSync(path.resolve(__dirname, 'input2.gif'));
+const startTime = performance.now();
 
 canvasGif(
 	file,

@@ -2,7 +2,7 @@
 	"name": "canvas-gif",
 	"author": "newtykins",
 	"repository": "https://github.com/newtykins/canvas-gif",
-	"description": "Manipulate GIFs easily using node-canvas!",
+	"description": "Manipulate GIFs easily, with a canvas-like API!",
 	"version": "2.0.0",
 	"main": "dist/index.js",
 	"license": "OQL",
@@ -10,14 +10,15 @@
 		"build": "gulp"
 	},
 	"dependencies": {
-		"canvas": "^2.8.0",
-		"decode-gif": "^1.0.1",
-		"gif-encoder-2": "^1.0.5",
-		"gm": "^1.23.1"
+		"gif-extract-frames": "^1.0.2",
+		"gifenc": "^1.0.3",
+		"lodash.chunk": "^4.2.0",
+		"sharp": "^0.30.3"
 	},
 	"devDependencies": {
-		"@types/gm": "1.18.11",
+		"@types/lodash.chunk": "^4.2.6",
 		"@types/node": "16.4.11",
+		"@types/sharp": "^0.30.1",
 		"dts-minify": "^0.3.0",
 		"glob": "^7.2.0",
 		"gulp": "^4.0.2",
