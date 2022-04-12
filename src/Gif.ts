@@ -11,17 +11,48 @@ interface FrameRange {
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
-	private width: number;
-	private height: number;
+	#width: number;
+	#height: number;
 
 	constructor(frames: FrameData[], options: Options<T>) {
 		this.frames = frames.map((frame) => new Frame(frame));
 		this.options = options;
-		this.width = frames[0].width;
-		this.height = frames[0].height;
+		this.#width = frames[0].width;
+		this.#height = frames[0].height;
 	}
 
-	async drawImage(
+	public get width() {
+		return this.#width;
+	}
+
+	public set width(newWidth: number) {
+		this.resize(newWidth, this.#height);
+	}
+
+	public get height() {
+		return this.#height;
+	}
+
+	public set height(newHeight: number) {
+		this.resize(this.#width, newHeight);
+	}
+
+	/**
+	 * Resize the GIF to newly specified dimensions!
+	 */
+	public resize(width: number, height: number) {
+		this.width = width;
+		this.height = height;
+
+		for (const frame of this.frames) {
+			frame.sharp = frame.sharp.resize(width, height);
+		}
+	}
+
+	/**
+	 * Draw an image over the GIF!
+	 */
+	public async drawImage(
 		image: Buffer,
 		x: number,
 		y: number,
@@ -77,7 +108,10 @@ export default class Gif<T extends number> {
 		});
 	}
 
-	async render() {
+	/**
+	 * Render the GIF into a buffer!
+	 */
+	public async render() {
 		// Form the encoder and calculate some important properties!
 		const gif = new GIFEncoder();
 		const fpsInterval = 1 / this.options.fps;
