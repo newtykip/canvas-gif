@@ -10,7 +10,9 @@ interface FrameRange {
 }
 
 type IncludedFrames = FrameRange | FrameRange[] | number | number[];
+type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
 
+// todo: wrap everything in svgs for custom css styling
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
@@ -19,6 +21,11 @@ export default class Gif<T extends number> {
 	private repeat: number;
 	private delay: number;
 
+	public fontSize: number = 20;
+	public fontName: string = 'sans';
+	public fontWeight: FontWeight = 'normal';
+
+	#brushColour: `#${string}` = '#000000';
 	#width: number;
 	#height: number;
 
@@ -61,6 +68,47 @@ export default class Gif<T extends number> {
 		this.resize(this.width, newHeight);
 	}
 
+	public get brushColour() {
+		return this.#brushColour;
+	}
+
+	// todo: allow for non-hex colours
+	public set brushColour(hex: `#${string}`) {
+		this.#brushColour = hex;
+	}
+
+	/**
+	 * Figure out which frames the image should be overlayed on
+	 */
+	private generateFrameRange(includedFrames: IncludedFrames) {
+		let frameNumbers: number[] = [];
+
+		const handleFrameRange = (range: FrameRange) => {
+			if (range.from <= 0) range.from = 1;
+			if (range.to > this.frames.length) range.to = this.frames.length;
+
+			for (let i = range.from; i <= range.to; i++) {
+				if (!frameNumbers.includes(i)) frameNumbers.push(i);
+			}
+		};
+
+		if (Array.isArray(includedFrames)) {
+			if (typeof includedFrames[0] === 'number') {
+				frameNumbers = includedFrames as number[];
+			} else {
+				(includedFrames as FrameRange[]).forEach((range) =>
+					handleFrameRange(range)
+				);
+			}
+		} else if (typeof includedFrames === 'number') {
+			frameNumbers.push(includedFrames);
+		} else {
+			handleFrameRange(includedFrames);
+		}
+
+		return frameNumbers;
+	}
+
 	/**
 	 * Resize the GIF to newly specified dimensions!
 	 */
@@ -70,6 +118,36 @@ export default class Gif<T extends number> {
 
 		for (const frame of this.frames) {
 			frame.sharp = frame.sharp.resize(width, height);
+		}
+	}
+
+	// todo: utils to make sure the text fits
+	public async drawText(
+		text: string,
+		x: number,
+		y: number,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		const frameNumbers = this.generateFrameRange(includedFrames);
+
+		const svg = Buffer.from(`
+<svg width="${this.width}" height="${this.height}">
+    <text x="${x}px" y="${y}px" font-family="${this.fontName}" font-weight="${
+			this.fontWeight
+		}" font-size="${this.fontSize}px" fill="${
+			this.#brushColour
+		}">${text}</text>
+</svg>
+		`);
+
+		for (const frame of this.frames) {
+			if (frameNumbers.includes(frame.number)) {
+				frame.sharp = frame.sharp.composite([
+					{
+						input: svg,
+					},
+				]);
+			}
 		}
 	}
 
@@ -103,32 +181,7 @@ export default class Gif<T extends number> {
 		}
 
 		// todo: stop the image being placed off of the screen
-
-		// Figure out which frames the image should be overlayed on
-		let frameNumbers: number[] = [];
-
-		const handleFrameRange = (range: FrameRange) => {
-			if (range.from <= 0) range.from = 1;
-			if (range.to > this.frames.length) range.to = this.frames.length;
-
-			for (let i = range.from; i <= range.to; i++) {
-				if (!frameNumbers.includes(i)) frameNumbers.push(i);
-			}
-		};
-
-		if (Array.isArray(includedFrames)) {
-			if (typeof includedFrames[0] === 'number') {
-				frameNumbers = includedFrames as number[];
-			} else {
-				(includedFrames as FrameRange[]).forEach((range) =>
-					handleFrameRange(range)
-				);
-			}
-		} else if (typeof includedFrames === 'number') {
-			frameNumbers.push(includedFrames);
-		} else {
-			handleFrameRange(includedFrames);
-		}
+		const frameNumbers = this.generateFrameRange(includedFrames);
 
 		// Overlay the image on the frames that are within the specified range
 		for (const frame of this.frames) {
