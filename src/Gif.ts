@@ -2,25 +2,47 @@ import sharp from 'sharp';
 import Frame, { FrameData } from './Frame';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
+import decodeGif from './decodeGif';
 
 interface FrameRange {
 	from: number;
 	to: number;
 }
 
+type IncludedFrames = FrameRange | FrameRange[] | number | number[];
+
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
+	private channels: number;
+	private encoder: GIFEncoder;
+	private repeat: number;
+	private delay: number;
+
 	#width: number;
 	#height: number;
-	public channels: number;
 
+	// todo: allow for the creation of gifs from an empty canvas
 	constructor(frames: FrameData[], options: Options<T>) {
-		this.frames = frames.map((frame) => new Frame(frame));
+		// Store the options
 		this.options = options;
+
+		// Find information about the frames
+		this.frames = frames.map((frame) => new Frame(frame));
 		this.#width = frames[0].width;
 		this.#height = frames[0].height;
 		this.channels = frames[0].channels;
+
+		// Instantiate the encoder
+		this.encoder = new GIFEncoder();
+		this.repeat = 0;
+		const fpsInteval = 1 / this.options.fps;
+		this.delay = fpsInteval * 1000;
+
+		if (this.options.repeat !== 'forever') {
+			if (this.options.repeat === 1) this.repeat = -1;
+			else this.repeat = this.options.repeat;
+		}
 	}
 
 	public get width() {
@@ -60,9 +82,7 @@ export default class Gif<T extends number> {
 		y: number,
 		width?: number,
 		height?: number,
-		includedFrames: FrameRange | FrameRange[] | number | number[] = [
-			{ from: 1, to: this.frames.length },
-		]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
 		// Make sure the image can not be bigger than the background GIF
 		if (width > this.width) width = this.width;
@@ -124,15 +144,41 @@ export default class Gif<T extends number> {
 		}
 	}
 
-	// todo: accept strings/buffers
+	// todo: account for differing fps - render the same image until a new one should show
+	// todo: consider included frames
 	public async drawGif<T extends number>(
-		gif: Gif<T>,
+		gif: Buffer | string | Gif<T>,
 		x: number,
 		y: number,
 		width?: number,
 		height?: number,
 		loop: boolean = true
 	) {
+		if (typeof gif === 'string' || gif instanceof Buffer) {
+			const { frames, fps, width, height, channels } = await decodeGif(
+				gif,
+				this.options?.coalesce ?? true
+			);
+
+			const { fps: oldFps, ...options } = this.options;
+
+			gif = new Gif<T>(
+				frames.map((data, i): FrameData => {
+					return {
+						data,
+						height,
+						width,
+						channels,
+						frameNumber: i + 1,
+					};
+				}),
+				{
+					fps,
+					...(options as any),
+				}
+			);
+		}
+
 		const frameCount =
 			loop || gif.frames.length >= this.frames.length
 				? this.frames.length
@@ -151,7 +197,6 @@ export default class Gif<T extends number> {
 		if (gif.height > this.height) gif.resize(gif.width, this.height);
 
 		for (let i = 0; i < frameCount; i++) {
-			// todo: consider included frames
 			this.frames[i].sharp = this.frames[i].sharp.composite([
 				{
 					input: await gif.frames[
@@ -173,17 +218,6 @@ export default class Gif<T extends number> {
 	 * Render the GIF into a buffer!
 	 */
 	public async render() {
-		// Form the encoder and calculate some important properties!
-		const gif = new GIFEncoder();
-		const fpsInterval = 1 / this.options.fps;
-		const delay = fpsInterval * 1000;
-		let resolvedRepeat = 0;
-
-		if (this.options.repeat !== 'forever') {
-			if (this.options.repeat === 1) resolvedRepeat = -1;
-			else resolvedRepeat = this.options.repeat;
-		}
-
 		// Write each frame to the encoder
 		for (let i = 0; i < this.frames.length; i++) {
 			if (this.options.verbose) {
@@ -200,15 +234,17 @@ export default class Gif<T extends number> {
 			const palette = quantize(data, 256);
 			const index = applyPalette(data, palette);
 
-			gif.writeFrame(index, this.width, this.height, {
+			this.encoder.writeFrame(index, this.width, this.height, {
 				palette,
-				delay,
-				repeat: resolvedRepeat,
+				delay: this.delay,
+				repeat: this.repeat,
 			});
 		}
 
 		// Return the final buffer
-		gif.finish();
-		return Buffer.from(gif.buffer);
+		this.encoder.finish();
+		const output = Buffer.from(this.encoder.buffer);
+		this.encoder = new GIFEncoder();
+		return output;
 	}
 }

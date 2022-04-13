@@ -18,7 +18,7 @@ async function doStuff() {
 		{
 			coalesce: false,
 			repeat: 'forever',
-			fps: 60,
+			fps: 15,
 		}
 	);
 
