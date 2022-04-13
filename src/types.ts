@@ -35,4 +35,10 @@ export interface Options<T extends number> {
 	 * @default Source GIF frame count
 	 */
 	fps?: number;
+
+	/**
+	 * Whether the libary should log about its process when rendering GIFs
+	 * @default false
+	 */
+	verbose?: boolean;
 }

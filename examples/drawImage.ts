@@ -11,9 +11,10 @@ async function doStuff() {
 		coalesce: false, // whether the gif should be coalesced first, default: true
 		repeat: 'forever', // how many times the GIF should repeat, default: 'forever'
 		fps: 30, // the amount of frames to render per second, default: source gif frame count!
+		verbose: true, // whether it should log about its rendering process, default: false
 	});
 
-	await gif.drawImage(image, 30, 60, 100, 100, [
+	await gif.drawImage(image, 10, 10, 100, 100, [
 		{
 			from: 5,
 			to: 10,

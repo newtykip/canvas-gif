@@ -1,29 +1,24 @@
-import extractFrames from 'gif-extract-frames';
-import chunk from 'lodash.chunk';
+import decodeGif from './decodeGif';
 import { Options } from './types';
 import Gif from './Gif';
 import { FrameData } from './Frame';
 
 /**
  * Creates an instance of the GIF canvas!
- * @param input Can be either a file path to a GIF or
+ * @param input Can be either a file path or Buffer!
  */
 export = async function canvasGif<T extends number>(
-	input: string | Buffer,
+	gif: string | Buffer,
 	options?: Options<T>
 ) {
-	// Extract all of the frames and read the data
-	const result = await extractFrames({
-		input,
-		coalesce: options?.coalesce ?? true,
-	});
-	const [fps, width, height, channels] = result.shape;
-	const frames = chunk(result.data, height * width * channels).map(
-		(a: any[]) => new Uint8ClampedArray(a)
+	const { frames, fps, width, height, channels } = await decodeGif(
+		gif,
+		options?.coalesce ?? true
 	);
 
 	// If the fps has not already been set, set it to the fps we just found from the source GIF
 	options.fps ??= fps;
+	options.verbose ??= false;
 
 	// Return the newly made GIF instance!
 	return new Gif(

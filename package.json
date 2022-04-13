@@ -10,14 +10,17 @@
 		"build": "gulp"
 	},
 	"dependencies": {
-		"gif-extract-frames": "^1.0.2",
 		"gifenc": "^1.0.3",
 		"lodash.chunk": "^4.2.0",
+		"ndarray": "^1.0.19",
+		"omggif": "^1.0.10",
 		"sharp": "^0.30.3"
 	},
 	"devDependencies": {
+		"@types/get-pixels": "^3.3.2",
 		"@types/lodash.chunk": "^4.2.6",
 		"@types/node": "16.4.11",
+		"@types/omggif": "^1.0.3",
 		"@types/sharp": "^0.30.1",
 		"dts-minify": "^0.3.0",
 		"glob": "^7.2.0",

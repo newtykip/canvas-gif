@@ -26,7 +26,7 @@ export default class Frame {
 		this.number = frameData.frameNumber;
 	}
 
-	async renderFrame() {
+	async render() {
 		return new Uint8ClampedArray(await this.sharp.toBuffer());
 	}
 }

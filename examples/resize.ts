@@ -10,6 +10,7 @@ async function doStuff() {
 		coalesce: false, // whether the gif should be coalesced first, default: true
 		repeat: 'forever', // how many times the GIF should repeat, default: 'forever'
 		fps: 30, // the amount of frames to render per second, default: source gif frame count!
+		verbose: true, // whether it should log about its rendering process, default: false
 	});
 
 	await gif.resize(1000, 1000);

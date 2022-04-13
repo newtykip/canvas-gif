@@ -5,3 +5,4 @@ src
 gulpfile.js
 pnpm-lock.yaml
 tsconfig.json
+frames
