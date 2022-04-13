@@ -3,6 +3,8 @@ import Frame, { FrameData } from './Frame';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
 import decodeGif from './decodeGif';
+import type CSS from 'csstype';
+import styleToString from 'style-object-to-css-string';
 
 interface FrameRange {
 	from: number;
@@ -11,6 +13,8 @@ interface FrameRange {
 
 type IncludedFrames = FrameRange | FrameRange[] | number | number[];
 type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
+type Hex = `#${string}`;
+type SVGStyles = Omit<CSS.SvgProperties, 'stroke'>;
 
 // todo: wrap everything in svgs for custom css styling
 export default class Gif<T extends number> {
@@ -25,7 +29,8 @@ export default class Gif<T extends number> {
 	public fontName: string = 'sans';
 	public fontWeight: FontWeight = 'normal';
 
-	#brushColour: `#${string}` = '#000000';
+	#brushColour: Hex = '#000000';
+
 	#width: number;
 	#height: number;
 
@@ -73,14 +78,25 @@ export default class Gif<T extends number> {
 	}
 
 	// todo: allow for non-hex colours
-	public set brushColour(hex: `#${string}`) {
+	public set brushColour(hex: Hex) {
 		this.#brushColour = hex;
 	}
 
 	/**
-	 * Figure out which frames the image should be overlayed on
+	 * Draw something over a specified set of frames on the GIF!
 	 */
-	private generateFrameRange(includedFrames: IncludedFrames) {
+	private drawOverFrames(
+		input:
+			| string
+			| Buffer
+			| {
+					create: sharp.Create;
+			  },
+		includedFrames: IncludedFrames,
+		x?: number,
+		y?: number
+	) {
+		// Find the frames to render the content over
 		let frameNumbers: number[] = [];
 
 		const handleFrameRange = (range: FrameRange) => {
@@ -106,7 +122,39 @@ export default class Gif<T extends number> {
 			handleFrameRange(includedFrames);
 		}
 
-		return frameNumbers;
+		for (const frame of this.frames) {
+			if (frameNumbers.includes(frame.number)) {
+				frame.sharp = frame.sharp.composite([
+					{
+						input,
+						top: y,
+						left: x,
+					},
+				]);
+			}
+		}
+	}
+
+	/**
+	 * Convert a list of SVG properties to a string
+	 */
+	private stylesToString(styles: CSS.SvgProperties): string {
+		let output = '';
+
+		for (const key in styles) {
+			const name = key
+				.split('')
+				.map((letter, idx) => {
+					return letter.toUpperCase() === letter
+						? `${idx !== 0 ? '-' : ''}${letter.toLowerCase()}`
+						: letter;
+				})
+				.join('');
+
+			output += ` ${name}="${styles[key]}"`;
+		}
+
+		return output.trimLeft();
 	}
 
 	/**
@@ -122,33 +170,56 @@ export default class Gif<T extends number> {
 	}
 
 	// todo: utils to make sure the text fits
+	/**
+	 * Draw text on the GIF!
+	 */
 	public async drawText(
 		text: string,
 		x: number,
 		y: number,
+		styles?: SVGStyles,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
-		const frameNumbers = this.generateFrameRange(includedFrames);
-
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
-    <text x="${x}px" y="${y}px" font-family="${this.fontName}" font-weight="${
-			this.fontWeight
-		}" font-size="${this.fontSize}px" fill="${
-			this.#brushColour
-		}">${text}</text>
+    <text x="${x}px" y="${y}px" ${this.stylesToString({
+			fontFamily: styles?.fontFamily ?? this.fontName,
+			fontWeight: styles?.fontWeight ?? this.fontWeight,
+			fontSize: styles?.fontSize ?? `${this.fontSize}px`,
+			fill: styles?.fill ?? this.brushColour,
+			...styles,
+		})}>${text}</text>
 </svg>
 		`);
 
-		for (const frame of this.frames) {
-			if (frameNumbers.includes(frame.number)) {
-				frame.sharp = frame.sharp.composite([
-					{
-						input: svg,
-					},
-				]);
+		this.drawOverFrames(svg, includedFrames);
+	}
+
+	/**
+	 * Draw a rectangle on the GIF!
+	 */
+	public drawRect(
+		x: number,
+		y: number,
+		width: number,
+		height: number,
+		styles?: SVGStyles,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		const svg = Buffer.from(`
+<svg width="${this.width}" height="${this.height}">
+	<rect width="${width}px" height="${height}px" x="${x}px" y="${y}px" ${this.stylesToString(
+			{
+				stroke: this.brushColour,
+				fill: styles?.fill ?? 'none',
+				strokeWidth: styles?.strokeWidth ?? '4px',
+				...styles,
 			}
-		}
+		)} />
+</svg>
+		`);
+
+		this.drawOverFrames(svg, includedFrames);
 	}
 
 	/**
@@ -181,20 +252,7 @@ export default class Gif<T extends number> {
 		}
 
 		// todo: stop the image being placed off of the screen
-		const frameNumbers = this.generateFrameRange(includedFrames);
-
-		// Overlay the image on the frames that are within the specified range
-		for (const frame of this.frames) {
-			if (frameNumbers.includes(frame.number)) {
-				frame.sharp = frame.sharp.composite([
-					{
-						input: await sharpImage.toBuffer(),
-						top: y,
-						left: x,
-					},
-				]);
-			}
-		}
+		this.drawOverFrames(await sharpImage.toBuffer(), includedFrames, x, y);
 	}
 
 	// todo: account for differing fps - render the same image until a new one should show

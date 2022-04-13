@@ -6,6 +6,7 @@ specifiers:
   '@types/node': 16.4.11
   '@types/omggif': ^1.0.3
   '@types/sharp': ^0.30.1
+  csstype: ^3.0.11
   dts-minify: ^0.3.0
   gifenc: ^1.0.3
   glob: ^7.2.0
@@ -17,15 +18,18 @@ specifiers:
   ndarray: ^1.0.19
   omggif: ^1.0.10
   sharp: ^0.30.3
+  style-object-to-css-string: ^1.0.1
   ttypescript: ^1.5.13
   typescript: 4.3.5
 
 dependencies:
+  csstype: 3.0.11
   gifenc: 1.0.3
   lodash.chunk: 4.2.0
   ndarray: 1.0.19
   omggif: 1.0.10
   sharp: 0.30.3
+  style-object-to-css-string: 1.0.1
 
 devDependencies:
   '@types/get-pixels': 3.3.2
@@ -521,6 +525,10 @@ packages:
 
   /core-util-is/1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
+
+  /csstype/3.0.11:
+    resolution: {integrity: sha512-sa6P2wJ+CAbgyy4KFssIb/JNMLxFvKF1pCYCSXS8ZMuqZnMsrxqI2E5sPyoTpxoPU/gVZMzr2zjOfg8GIZOMsw==}
+    dev: false
 
   /d/1.0.1:
     resolution: {integrity: sha512-m62ShEObQ39CfralilEQRjH6oAMtNCV1xJyEx5LpRYUVN+EviphDgUc/F3hnYbADmkiNs67Y+3ylmlG7Lnu+FA==}
@@ -2284,6 +2292,10 @@ packages:
   /strip-json-comments/2.0.1:
     resolution: {integrity: sha1-PFMZQukIwml8DsNEhYwobHygpgo=}
     engines: {node: '>=0.10.0'}
+    dev: false
+
+  /style-object-to-css-string/1.0.1:
+    resolution: {integrity: sha512-ci7tySCofUqq86WziXoEsIE/aGZ2rkw7mmz6Afklhbmk7i05Z1d8hSUaJMUWUOJPbsvK+7TW5ulklZm55/S44Q==}
     dev: false
 
   /supports-preserve-symlinks-flag/1.0.0:
