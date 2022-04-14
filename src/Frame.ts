@@ -11,9 +11,12 @@ export interface FrameData {
 export default class Frame {
 	public number: number;
 	public sharp: sharp.Sharp;
+	public data: Uint8ClampedArray;
 
 	constructor(frameData: FrameData) {
 		const { data, channels, height, width } = frameData;
+
+		this.data = data;
 
 		this.sharp = sharp(data, {
 			raw: {

@@ -3,7 +3,8 @@ import canvasGif from '../src';
 import fs from 'fs';
 import path from 'path';
 
-const image = fs.readFileSync(path.resolve(__dirname, 'dog.png'));
+const pfp = fs.readFileSync(path.resolve(__dirname, 'joker.jpg'));
+const dog = fs.readFileSync(path.resolve(__dirname, 'dog.png'));
 const startTime = performance.now();
 
 async function doStuff() {
@@ -14,16 +15,27 @@ async function doStuff() {
 		verbose: true, // whether it should log about its rendering process, default: false
 	});
 
-	await gif.drawImage(image, 10, 10, 100, 100, [
-		{
-			from: 5,
-			to: 10,
-		},
-		{
-			from: 50,
-			to: 55,
-		},
-	]);
+	const options = {
+		width: 100,
+		height: 100,
+		includedFrames: [
+			{
+				from: 5,
+				to: 10,
+			},
+			{
+				from: 50,
+				to: 55,
+			},
+		],
+	};
+
+	await gif.drawImage(pfp, 10, 10, {
+		circle: true,
+		...options,
+	});
+
+	await gif.drawImage(dog, 200, 10, options);
 
 	const result = await gif.render();
 	const endTime = performance.now();

@@ -4,6 +4,7 @@ import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
+import bufferToDataUrl from 'buffer-to-data-url';
 
 interface FrameRange {
 	from: number;
@@ -15,10 +16,15 @@ interface Element {
 	frames: number[];
 }
 
+const roundedCorners = (width: number, height: number) =>
+	Buffer.from(
+		`<svg><rect x="0" y="0" width="${width}" height="${height}" rx="50" ry="50" /></svg>`
+	);
+
 type IncludedFrames = FrameRange | FrameRange[] | number | number[];
 type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
 type Hex = `#${string}`;
-type SVGStyles = Omit<CSS.SvgProperties, 'stroke'>;
+type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
 
 // todo: wrap everything in svgs for custom css styling
 export default class Gif<T extends number> {
@@ -35,7 +41,6 @@ export default class Gif<T extends number> {
 	public fontWeight: FontWeight = 'normal';
 
 	#brushColour: Hex = '#000000';
-
 	#width: number;
 	#height: number;
 
@@ -157,7 +162,7 @@ export default class Gif<T extends number> {
 		text: string,
 		x: number,
 		y: number,
-		styles?: SVGStyles,
+		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
 		const svg = Buffer.from(`
@@ -188,7 +193,7 @@ export default class Gif<T extends number> {
 		y: number,
 		width: number,
 		height: number,
-		styles?: SVGStyles,
+		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
 		const svg = Buffer.from(`
@@ -219,7 +224,7 @@ export default class Gif<T extends number> {
 		x: number,
 		y: number,
 		radius: number,
-		styles?: SVGStyles,
+		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
 		const svg = Buffer.from(`
@@ -248,10 +253,20 @@ export default class Gif<T extends number> {
 		image: Buffer | sharp.Sharp,
 		x: number,
 		y: number,
-		width?: number,
-		height?: number,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		options?: {
+			width?: number;
+			height?: number;
+			properties?: SVGProperties;
+			includedFrames?: IncludedFrames;
+			circle?: boolean;
+		}
 	) {
+		const { properties } = options;
+		let { width, height, circle, includedFrames } = options;
+
+		circle ??= false;
+		includedFrames ??= [{ from: 1, to: this.frames.length }];
+
 		// Make sure the image can not be bigger than the background GIF
 		if (width > this.width) width = this.width;
 		if (height > this.height) height = this.height;
@@ -270,10 +285,19 @@ export default class Gif<T extends number> {
 			);
 		}
 
+		if (circle) {
+			sharpImage.composite([
+				{
+					input: roundedCorners(width, height),
+					blend: 'dest-in',
+				},
+			]);
+		}
+
 		// todo: stop the image being placed off of the screen
 		this.elements.push({
 			overlay: {
-				input: await sharpImage.toBuffer(),
+				input: await sharpImage.png().toBuffer(),
 				top: y,
 				left: x,
 			},
