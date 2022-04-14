@@ -15,8 +15,7 @@
 		"lodash.chunk": "^4.2.0",
 		"ndarray": "^1.0.19",
 		"omggif": "^1.0.10",
-		"sharp": "^0.30.3",
-		"style-object-to-css-string": "^1.0.1"
+		"sharp": "^0.30.3"
 	},
 	"devDependencies": {
 		"@types/get-pixels": "^3.3.2",

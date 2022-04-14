@@ -18,7 +18,6 @@ specifiers:
   ndarray: ^1.0.19
   omggif: ^1.0.10
   sharp: ^0.30.3
-  style-object-to-css-string: ^1.0.1
   ttypescript: ^1.5.13
   typescript: 4.3.5
 
@@ -29,7 +28,6 @@ dependencies:
   ndarray: 1.0.19
   omggif: 1.0.10
   sharp: 0.30.3
-  style-object-to-css-string: 1.0.1
 
 devDependencies:
   '@types/get-pixels': 3.3.2
@@ -2292,10 +2290,6 @@ packages:
   /strip-json-comments/2.0.1:
     resolution: {integrity: sha1-PFMZQukIwml8DsNEhYwobHygpgo=}
     engines: {node: '>=0.10.0'}
-    dev: false
-
-  /style-object-to-css-string/1.0.1:
-    resolution: {integrity: sha512-ci7tySCofUqq86WziXoEsIE/aGZ2rkw7mmz6Afklhbmk7i05Z1d8hSUaJMUWUOJPbsvK+7TW5ulklZm55/S44Q==}
     dev: false
 
   /supports-preserve-symlinks-flag/1.0.0:

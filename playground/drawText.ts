@@ -20,7 +20,7 @@ async function doStuff() {
 	// Obviously will only render properly if you have Poppins! Get it here: https://fonts.google.com/specimen/Poppins
 	gif.fontName = 'Poppins';
 
-	await gif.drawText('yems', 100, 100);
+	gif.drawText('yems', 100, 100);
 
 	const result = await gif.render();
 	const endTime = performance.now();

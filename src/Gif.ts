@@ -4,11 +4,15 @@ import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
-import styleToString from 'style-object-to-css-string';
 
 interface FrameRange {
 	from: number;
 	to: number;
+}
+
+interface Element {
+	overlay: sharp.OverlayOptions;
+	frames: number[];
 }
 
 type IncludedFrames = FrameRange | FrameRange[] | number | number[];
@@ -24,6 +28,7 @@ export default class Gif<T extends number> {
 	private encoder: GIFEncoder;
 	private repeat: number;
 	private delay: number;
+	private elements: Element[] = [];
 
 	public fontSize: number = 20;
 	public fontName: string = 'sans';
@@ -82,27 +87,12 @@ export default class Gif<T extends number> {
 		this.#brushColour = hex;
 	}
 
-	/**
-	 * Draw something over a specified set of frames on the GIF!
-	 */
-	private drawOverFrames(
-		input:
-			| string
-			| Buffer
-			| {
-					create: sharp.Create;
-			  },
-		includedFrames: IncludedFrames,
-		x?: number,
-		y?: number
-	) {
-		// Find the frames to render the content over
+	private generateFrameRange(includedFrames: IncludedFrames) {
 		let frameNumbers: number[] = [];
 
 		const handleFrameRange = (range: FrameRange) => {
 			if (range.from <= 0) range.from = 1;
 			if (range.to > this.frames.length) range.to = this.frames.length;
-
 			for (let i = range.from; i <= range.to; i++) {
 				if (!frameNumbers.includes(i)) frameNumbers.push(i);
 			}
@@ -122,17 +112,7 @@ export default class Gif<T extends number> {
 			handleFrameRange(includedFrames);
 		}
 
-		for (const frame of this.frames) {
-			if (frameNumbers.includes(frame.number)) {
-				frame.sharp = frame.sharp.composite([
-					{
-						input,
-						top: y,
-						left: x,
-					},
-				]);
-			}
-		}
+		return frameNumbers;
 	}
 
 	/**
@@ -173,7 +153,7 @@ export default class Gif<T extends number> {
 	/**
 	 * Draw text on the GIF!
 	 */
-	public async drawText(
+	public drawText(
 		text: string,
 		x: number,
 		y: number,
@@ -192,7 +172,12 @@ export default class Gif<T extends number> {
 </svg>
 		`);
 
-		this.drawOverFrames(svg, includedFrames);
+		this.elements.push({
+			overlay: {
+				input: svg,
+			},
+			frames: this.generateFrameRange(includedFrames),
+		});
 	}
 
 	/**
@@ -219,7 +204,41 @@ export default class Gif<T extends number> {
 </svg>
 		`);
 
-		this.drawOverFrames(svg, includedFrames);
+		this.elements.push({
+			overlay: {
+				input: svg,
+			},
+			frames: this.generateFrameRange(includedFrames),
+		});
+	}
+
+	/**
+	 * Draw a circle on the GIF!
+	 */
+	public drawCircle(
+		x: number,
+		y: number,
+		radius: number,
+		styles?: SVGStyles,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		const svg = Buffer.from(`
+<svg width="${this.width}" height="${this.height}">
+	<circle cx="${x}px" cy="${y}px" r="${radius}px" ${this.stylesToString({
+			stroke: this.brushColour,
+			fill: styles?.fill ?? 'none',
+			strokeWidth: styles?.strokeWidth ?? '4px',
+			...styles,
+		})} />
+</svg>
+		`);
+
+		this.elements.push({
+			overlay: {
+				input: svg,
+			},
+			frames: this.generateFrameRange(includedFrames),
+		});
 	}
 
 	/**
@@ -252,7 +271,14 @@ export default class Gif<T extends number> {
 		}
 
 		// todo: stop the image being placed off of the screen
-		this.drawOverFrames(await sharpImage.toBuffer(), includedFrames, x, y);
+		this.elements.push({
+			overlay: {
+				input: await sharpImage.toBuffer(),
+				top: y,
+				left: x,
+			},
+			frames: this.generateFrameRange(includedFrames),
+		});
 	}
 
 	// todo: account for differing fps - render the same image until a new one should show
@@ -308,8 +334,8 @@ export default class Gif<T extends number> {
 		if (gif.height > this.height) gif.resize(gif.width, this.height);
 
 		for (let i = 0; i < frameCount; i++) {
-			this.frames[i].sharp = this.frames[i].sharp.composite([
-				{
+			this.elements.push({
+				overlay: {
 					input: await gif.frames[
 						loop ? i % gif.frames.length : i
 					].sharp.toBuffer(),
@@ -321,7 +347,8 @@ export default class Gif<T extends number> {
 						channels: gif.channels as any,
 					},
 				},
-			]);
+				frames: [i + 1],
+			});
 		}
 	}
 
@@ -329,7 +356,6 @@ export default class Gif<T extends number> {
 	 * Render the GIF into a buffer!
 	 */
 	public async render() {
-		// Write each frame to the encoder
 		for (let i = 0; i < this.frames.length; i++) {
 			if (this.options.verbose) {
 				console.log(
@@ -340,7 +366,15 @@ export default class Gif<T extends number> {
 				);
 			}
 
+			// Render the edits to each frame from the elements system
 			const frame = this.frames[i];
+			const overlays = this.elements
+				.filter((layer) => layer.frames.includes(frame.number))
+				.map((layer) => layer.overlay);
+
+			frame.sharp = frame.sharp.composite(overlays);
+
+			// Write each frame to the encoder
 			const data = await frame.render();
 			const palette = quantize(data, 256);
 			const index = applyPalette(data, palette);
@@ -356,6 +390,7 @@ export default class Gif<T extends number> {
 		this.encoder.finish();
 		const output = Buffer.from(this.encoder.buffer);
 		this.encoder = new GIFEncoder();
+
 		return output;
 	}
 }

@@ -15,9 +15,11 @@ async function doStuff() {
 
 	gif.brushColour = '#ffffff';
 
-	await gif.drawRect(30, 30, 100, 100, {
-		strokeWidth: '5px',
-	});
+	await gif.drawRect(30, 30, 100, 100);
+
+	gif.brushColour = '#000000';
+
+	await gif.drawCircle(200, 200, 50);
 
 	const result = await gif.render();
 	const endTime = performance.now();

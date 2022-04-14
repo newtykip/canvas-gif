@@ -13,7 +13,7 @@ async function doStuff() {
 		verbose: true, // whether it should log about its rendering process, default: false
 	});
 
-	await gif.resize(1000, 1000);
+	gif.resize(1000, 1000);
 
 	const result = await gif.render();
 	const endTime = performance.now();
