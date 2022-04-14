@@ -9,7 +9,7 @@ import { FrameData } from './Frame';
  */
 export = async function canvasGif<T extends number>(
 	gif: string | Buffer,
-	options?: Options<T>
+	options: Options<T> = {}
 ) {
 	const { frames, fps, width, height, channels } = await decodeGif(
 		gif,

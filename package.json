@@ -10,7 +10,6 @@
 		"build": "gulp"
 	},
 	"dependencies": {
-		"buffer-to-data-url": "^1.0.0",
 		"csstype": "^3.0.11",
 		"gifenc": "^1.0.3",
 		"lodash.chunk": "^4.2.0",

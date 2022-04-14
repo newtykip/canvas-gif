@@ -4,7 +4,6 @@ import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
-import bufferToDataUrl from 'buffer-to-data-url';
 
 interface FrameRange {
 	from: number;
@@ -18,7 +17,7 @@ interface Element {
 
 const roundedCorners = (width: number, height: number) =>
 	Buffer.from(
-		`<svg><rect x="0" y="0" width="${width}" height="${height}" rx="50" ry="50" /></svg>`
+		`<svg><rect x="0" y="0" width="${width}" height="${height}" rx="${width}" ry="${height}" /></svg>`
 	);
 
 type IncludedFrames = FrameRange | FrameRange[] | number | number[];
@@ -256,15 +255,11 @@ export default class Gif<T extends number> {
 		options?: {
 			width?: number;
 			height?: number;
-			properties?: SVGProperties;
 			includedFrames?: IncludedFrames;
 			circle?: boolean;
 		}
 	) {
-		const { properties } = options;
 		let { width, height, circle, includedFrames } = options;
-
-		circle ??= false;
 		includedFrames ??= [{ from: 1, to: this.frames.length }];
 
 		// Make sure the image can not be bigger than the background GIF
@@ -311,10 +306,16 @@ export default class Gif<T extends number> {
 		gif: Buffer | string | Gif<T>,
 		x: number,
 		y: number,
-		width?: number,
-		height?: number,
-		loop: boolean = true
+		options?: {
+			width?: number;
+			height?: number;
+			loop?: boolean;
+			circle?: boolean;
+		}
 	) {
+		let { width, height, loop, circle } = options;
+		loop ??= true;
+
 		if (typeof gif === 'string' || gif instanceof Buffer) {
 			const { frames, fps, width, height, channels } = await decodeGif(
 				gif,
@@ -346,6 +347,8 @@ export default class Gif<T extends number> {
 				: gif.frames.length;
 
 		// Handle size changes
+		if (!width) width = gif.width;
+		if (!height) height = gif.height;
 		if (width > this.width) width = this.width;
 		if (height > this.height) height = this.height;
 
@@ -358,21 +361,42 @@ export default class Gif<T extends number> {
 		if (gif.height > this.height) gif.resize(gif.width, this.height);
 
 		for (let i = 0; i < frameCount; i++) {
-			this.elements.push({
-				overlay: {
-					input: await gif.frames[
-						loop ? i % gif.frames.length : i
-					].sharp.toBuffer(),
-					top: y,
-					left: x,
-					raw: {
-						width: gif.width,
-						height: gif.height,
-						channels: gif.channels as any,
+			if (circle) {
+				this.elements.push({
+					overlay: {
+						input: await gif.frames[
+							loop ? i % gif.frames.length : i
+						].sharp
+							.composite([
+								{
+									input: roundedCorners(width, height),
+									blend: 'dest-in',
+								},
+							])
+							.png()
+							.toBuffer(),
+						top: y,
+						left: x,
 					},
-				},
-				frames: [i + 1],
-			});
+					frames: [i + 1],
+				});
+			} else {
+				this.elements.push({
+					overlay: {
+						input: await gif.frames[
+							loop ? i % gif.frames.length : i
+						].sharp.toBuffer(),
+						top: y,
+						left: x,
+						raw: {
+							width: gif.width,
+							height: gif.height,
+							channels: gif.channels as any,
+						},
+					},
+					frames: [i + 1],
+				});
+			}
 		}
 	}
 

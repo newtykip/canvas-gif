@@ -6,25 +6,36 @@ import path from 'path';
 const startTime = performance.now();
 
 async function doStuff() {
-	const gif = await canvasGif(path.resolve(__dirname, 'input2.gif'), {
+	const rubiksCube = await canvasGif(path.resolve(__dirname, 'input2.gif'), {
 		coalesce: false, // whether the gif should be coalesced first, default: true
 		repeat: 'forever', // how many times the GIF should repeat, default: 'forever'
 		fps: 30, // the amount of frames to render per second, default: source gif frame count!,
 		verbose: true, // whether it should log about its rendering process, default: false
 	});
 
-	const otherGif = await canvasGif(
+	const catCube = await canvasGif(
 		fs.readFileSync(path.resolve(__dirname, 'input.gif')),
 		{
-			coalesce: false,
-			repeat: 'forever',
 			fps: 15,
 		}
 	);
 
-	await gif.drawGif(otherGif, 0, 0, 150, 150);
+	const taiga = await canvasGif(
+		fs.readFileSync(path.resolve(__dirname, 'taiga.gif'))
+	);
 
-	const result = await gif.render();
+	await rubiksCube.drawGif(catCube, 0, 0, {
+		width: 150,
+		height: 150,
+	});
+
+	await rubiksCube.drawGif(taiga, 150, 100, {
+		width: 150,
+		height: 150,
+		circle: true,
+	});
+
+	const result = await rubiksCube.render();
 
 	const endTime = performance.now();
 	console.log(`Finished in ${endTime - startTime}ms!`);
