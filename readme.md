@@ -1,8 +1,8 @@
 <div align="center">
-    <img src="examples/output1.gif" height="250"><br>
+    <img src="playground/drawGif.gif" height="250"><br>
     <h1>canvas-gif</h1>
 	<h3><code>npm i canvas-gif</code></h3> 
-    <img src="https://img.shields.io/bundlephobia/min/canvas-gif?color=red&label=Package%20Size&logo=npm&style=for-the-badge" alt="Package Size">
+    <img src="https://img.shields.io/github/languages/code-size/newtykins/canvas-gif?color=red&logo=github&style=for-the-badge" alt="Code Size">
     <img src="https://img.shields.io/github/package-json/v/newtykins/canvas-gif?color=grey&logo=github&style=for-the-badge" alt="Version">
 </div>
 

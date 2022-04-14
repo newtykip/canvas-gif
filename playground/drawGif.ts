@@ -32,7 +32,7 @@ async function doStuff() {
 	await rubiksCube.drawGif(taiga, 150, 100, {
 		width: 150,
 		height: 150,
-		circle: true,
+		round: true,
 	});
 
 	const result = await rubiksCube.render();

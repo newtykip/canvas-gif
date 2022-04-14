@@ -31,7 +31,7 @@ async function doStuff() {
 	};
 
 	await gif.drawImage(pfp, 10, 10, {
-		circle: true,
+		round: true,
 		...options,
 	});
 

@@ -3,11 +3,12 @@
 	"author": "newtykins",
 	"repository": "https://github.com/newtykins/canvas-gif",
 	"description": "Manipulate GIFs easily, with a canvas-like API!",
-	"version": "2.0.0",
+	"version": "2.0.0-preview",
 	"main": "dist/index.js",
 	"license": "OQL",
 	"scripts": {
-		"build": "gulp"
+		"build": "gulp",
+		"prepublish": "npm run build"
 	},
 	"dependencies": {
 		"csstype": "^3.0.11",
@@ -30,6 +31,7 @@
 		"gulp-cli": "^2.3.0",
 		"gulp-typescript": "^6.0.0-alpha.1",
 		"gulp-uglify": "^3.0.2",
+		"rimraf": "^3.0.2",
 		"ts-node": "^10.7.0",
 		"ttypescript": "^1.5.13",
 		"typescript": "4.3.5"

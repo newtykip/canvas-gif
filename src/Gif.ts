@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import sharp, { Sharp } from 'sharp';
 import Frame, { FrameData } from './Frame';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
@@ -15,6 +15,12 @@ interface Element {
 	frames: number[];
 }
 
+interface RGB {
+	r: number;
+	g: number;
+	b: number;
+}
+
 const roundedCorners = (width: number, height: number) =>
 	Buffer.from(
 		`<svg><rect x="0" y="0" width="${width}" height="${height}" rx="${width}" ry="${height}" /></svg>`
@@ -25,7 +31,8 @@ type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
 type Hex = `#${string}`;
 type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
 
-// todo: wrap everything in svgs for custom css styling
+// todo: add frames to the gif at specified places (append gif?)
+// todo: docs
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
@@ -38,6 +45,7 @@ export default class Gif<T extends number> {
 	public fontSize: number = 20;
 	public fontName: string = 'sans';
 	public fontWeight: FontWeight = 'normal';
+	public frameCount: number;
 
 	#brushColour: Hex = '#000000';
 	#width: number;
@@ -50,6 +58,7 @@ export default class Gif<T extends number> {
 
 		// Find information about the frames
 		this.frames = frames.map((frame) => new Frame(frame));
+		this.frameCount = this.frames.length;
 		this.#width = frames[0].width;
 		this.#height = frames[0].height;
 		this.channels = frames[0].channels;
@@ -102,7 +111,11 @@ export default class Gif<T extends number> {
 			}
 		};
 
-		if (Array.isArray(includedFrames)) {
+		if (!includedFrames) {
+			for (let i = 1; i <= this.frames.length; i++) {
+				frameNumbers.push(i);
+			}
+		} else if (Array.isArray(includedFrames)) {
 			if (typeof includedFrames[0] === 'number') {
 				frameNumbers = includedFrames as number[];
 			} else {
@@ -117,6 +130,21 @@ export default class Gif<T extends number> {
 		}
 
 		return frameNumbers;
+	}
+
+	private editFrames(
+		includedFrames: IncludedFrames,
+		callback: (sharp: sharp.Sharp) => sharp.Sharp
+	) {
+		const frameNumbers = this.generateFrameRange(includedFrames);
+
+		for (const frame of this.frames) {
+			if (frameNumbers.includes(frame.number)) {
+				frame.sharp = callback(frame.sharp);
+			}
+		}
+
+		return this;
 	}
 
 	/**
@@ -148,9 +176,16 @@ export default class Gif<T extends number> {
 		this.#width = width;
 		this.#height = height;
 
-		for (const frame of this.frames) {
-			frame.sharp = frame.sharp.resize(width, height);
-		}
+		return this.editFrames(null, (sharp) => sharp.resize(width, height));
+	}
+
+	public crop(x: number, y: number, width: number, height: number) {
+		this.#width = width;
+		this.#height = height;
+
+		return this.editFrames(null, (sharp) =>
+			sharp.extract({ left: x, top: y, width, height })
+		);
 	}
 
 	// todo: utils to make sure the text fits
@@ -182,6 +217,8 @@ export default class Gif<T extends number> {
 			},
 			frames: this.generateFrameRange(includedFrames),
 		});
+
+		return this;
 	}
 
 	/**
@@ -214,6 +251,8 @@ export default class Gif<T extends number> {
 			},
 			frames: this.generateFrameRange(includedFrames),
 		});
+
+		return this;
 	}
 
 	/**
@@ -243,6 +282,8 @@ export default class Gif<T extends number> {
 			},
 			frames: this.generateFrameRange(includedFrames),
 		});
+
+		return this;
 	}
 
 	/**
@@ -256,10 +297,10 @@ export default class Gif<T extends number> {
 			width?: number;
 			height?: number;
 			includedFrames?: IncludedFrames;
-			circle?: boolean;
+			round?: boolean;
 		}
 	) {
-		let { width, height, circle, includedFrames } = options;
+		let { width, height, round, includedFrames } = options;
 		includedFrames ??= [{ from: 1, to: this.frames.length }];
 
 		// Make sure the image can not be bigger than the background GIF
@@ -280,7 +321,7 @@ export default class Gif<T extends number> {
 			);
 		}
 
-		if (circle) {
+		if (round) {
 			sharpImage.composite([
 				{
 					input: roundedCorners(width, height),
@@ -310,10 +351,10 @@ export default class Gif<T extends number> {
 			width?: number;
 			height?: number;
 			loop?: boolean;
-			circle?: boolean;
+			round?: boolean;
 		}
 	) {
-		let { width, height, loop, circle } = options;
+		let { width, height, loop, round } = options;
 		loop ??= true;
 
 		if (typeof gif === 'string' || gif instanceof Buffer) {
@@ -361,7 +402,7 @@ export default class Gif<T extends number> {
 		if (gif.height > this.height) gif.resize(gif.width, this.height);
 
 		for (let i = 0; i < frameCount; i++) {
-			if (circle) {
+			if (round) {
 				this.elements.push({
 					overlay: {
 						input: await gif.frames[
@@ -398,6 +439,61 @@ export default class Gif<T extends number> {
 				});
 			}
 		}
+
+		return this;
+	}
+
+	// sharp parity
+
+	public tint(
+		rgb: RGB,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) => sharp.tint(rgb));
+	}
+
+	public grayscale(
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) => sharp.grayscale());
+	}
+
+	public rotate(
+		angle: number,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) => sharp.rotate(angle));
+	}
+
+	public flip(
+		axis: 'X' | 'Y',
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) =>
+			axis === 'Y' ? sharp.flip() : sharp.flop()
+		);
+	}
+
+	public blur(
+		radius?: number,
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		// sigma = 1 + radius / 2
+		return this.editFrames(includedFrames, (sharp) =>
+			sharp.blur(radius ? 1 + radius / 2 : null)
+		);
+	}
+
+	public negate(
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) => sharp.negate());
+	}
+
+	public normalise(
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+	) {
+		return this.editFrames(includedFrames, (sharp) => sharp.normalise());
 	}
 
 	/**
