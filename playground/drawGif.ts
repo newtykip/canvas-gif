@@ -27,12 +27,14 @@ async function doStuff() {
 	await rubiksCube.drawGif(catCube, 0, 0, {
 		width: 150,
 		height: 150,
+		border: true,
 	});
 
 	await rubiksCube.drawGif(taiga, 150, 100, {
 		width: 150,
 		height: 150,
 		round: true,
+		border: true,
 	});
 
 	const result = await rubiksCube.render();

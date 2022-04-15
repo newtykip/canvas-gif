@@ -31,7 +31,11 @@ async function doStuff() {
 	};
 
 	await gif.drawImage(pfp, 10, 10, {
-		round: true,
+		// round: true,
+		border: {
+			thickness: 7,
+			colour: '#FF0000',
+		},
 		...options,
 	});
 

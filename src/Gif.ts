@@ -1,4 +1,4 @@
-import sharp, { Sharp } from 'sharp';
+import sharp from 'sharp';
 import Frame, { FrameData } from './Frame';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Options } from './types';
@@ -19,6 +19,19 @@ interface RGB {
 	r: number;
 	g: number;
 	b: number;
+}
+
+interface ImageOptions {
+	width?: number;
+	height?: number;
+	includedFrames?: IncludedFrames;
+	round?: boolean;
+	border?:
+		| boolean
+		| {
+				colour?: Hex;
+				thickness?: number;
+		  };
 }
 
 const roundedCorners = (width: number, height: number) =>
@@ -259,15 +272,15 @@ export default class Gif<T extends number> {
 	 * Draw a circle on the GIF!
 	 */
 	public drawCircle(
-		x: number,
-		y: number,
+		cx: number,
+		cy: number,
 		radius: number,
 		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
 	) {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
-	<circle cx="${x}px" cy="${y}px" r="${radius}px" ${this.stylesToString({
+	<circle cx="${cx}px" cy="${cy}px" r="${radius}px" ${this.stylesToString({
 			stroke: this.brushColour,
 			fill: styles?.fill ?? 'none',
 			strokeWidth: styles?.strokeWidth ?? '4px',
@@ -293,14 +306,9 @@ export default class Gif<T extends number> {
 		image: Buffer | sharp.Sharp,
 		x: number,
 		y: number,
-		options?: {
-			width?: number;
-			height?: number;
-			includedFrames?: IncludedFrames;
-			round?: boolean;
-		}
+		options?: ImageOptions
 	) {
-		let { width, height, round, includedFrames } = options;
+		let { width, height, round, includedFrames, border } = options;
 		includedFrames ??= [{ from: 1, to: this.frames.length }];
 
 		// Make sure the image can not be bigger than the background GIF
@@ -330,6 +338,40 @@ export default class Gif<T extends number> {
 			]);
 		}
 
+		if (border) {
+			const oldBrush = this.brushColour;
+			if (typeof border !== 'boolean')
+				this.brushColour = border?.colour ?? oldBrush;
+
+			const thickness =
+				typeof border !== 'boolean' ? border?.thickness ?? 4 : 4;
+
+			if (round) {
+				this.drawCircle(
+					x + width / 2,
+					y + height / 2,
+					width / 2,
+					{
+						strokeWidth: `${thickness}px`,
+					},
+					includedFrames
+				);
+			} else {
+				this.drawRect(
+					x - thickness / 2,
+					y - thickness / 2,
+					width + thickness,
+					height + thickness,
+					{
+						strokeWidth: `${thickness}px`,
+					},
+					includedFrames
+				);
+			}
+
+			this.brushColour = oldBrush;
+		}
+
 		// todo: stop the image being placed off of the screen
 		this.elements.push({
 			overlay: {
@@ -347,14 +389,11 @@ export default class Gif<T extends number> {
 		gif: Buffer | string | Gif<T>,
 		x: number,
 		y: number,
-		options?: {
-			width?: number;
-			height?: number;
+		options?: Omit<ImageOptions, 'includedFrames'> & {
 			loop?: boolean;
-			round?: boolean;
 		}
 	) {
-		let { width, height, loop, round } = options;
+		let { width, height, loop, round, border } = options;
 		loop ??= true;
 
 		if (typeof gif === 'string' || gif instanceof Buffer) {
@@ -401,43 +440,70 @@ export default class Gif<T extends number> {
 			gif.resize(this.width, gif.height);
 		if (gif.height > this.height) gif.resize(gif.width, this.height);
 
-		for (let i = 0; i < frameCount; i++) {
+		if (border) {
+			const oldBrush = this.brushColour;
+			if (typeof border !== 'boolean')
+				this.brushColour = border?.colour ?? oldBrush;
+
+			const thickness =
+				typeof border !== 'boolean' ? border?.thickness ?? 4 : 4;
+
 			if (round) {
-				this.elements.push({
-					overlay: {
-						input: await gif.frames[
-							loop ? i % gif.frames.length : i
-						].sharp
-							.composite([
-								{
-									input: roundedCorners(width, height),
-									blend: 'dest-in',
-								},
-							])
-							.png()
-							.toBuffer(),
-						top: y,
-						left: x,
-					},
-					frames: [i + 1],
-				});
+				this.drawCircle(
+					x + width / 2,
+					y + height / 2,
+					width / 2,
+					{
+						strokeWidth: `${thickness}px`,
+					}
+					// includedFrames
+				);
 			} else {
-				this.elements.push({
-					overlay: {
-						input: await gif.frames[
-							loop ? i % gif.frames.length : i
-						].sharp.toBuffer(),
-						top: y,
-						left: x,
-						raw: {
-							width: gif.width,
-							height: gif.height,
-							channels: gif.channels as any,
-						},
-					},
-					frames: [i + 1],
-				});
+				this.drawRect(
+					x - thickness / 2,
+					y - thickness / 2,
+					width + thickness,
+					height + thickness,
+					{
+						strokeWidth: `${thickness}px`,
+					}
+					// includedFrames
+				);
 			}
+
+			this.brushColour = oldBrush;
+		}
+
+		for (let i = 0; i < frameCount; i++) {
+			const raw = !round
+				? {
+						width: gif.width,
+						height: gif.height,
+						channels: gif.channels as any,
+				  }
+				: null;
+
+			let sharp = gif.frames[loop ? i % gif.frames.length : i].sharp;
+
+			if (round)
+				sharp = sharp
+					.composite([
+						{
+							input: roundedCorners(width, height),
+							blend: 'dest-in',
+						},
+					])
+					.png();
+
+			this.elements.push({
+				overlay: {
+					input: await sharp.toBuffer(),
+					top: y,
+					left: x,
+					raw,
+				},
+				frames: [i + 1],
+			});
 		}
 
 		return this;
