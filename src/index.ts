@@ -1,5 +1,5 @@
 import decodeGif from './decodeGif';
-import { Options } from './types';
+import { Options } from './Gif';
 import Gif from './Gif';
 import { FrameData } from './Frame';
 

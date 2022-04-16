@@ -8,6 +8,7 @@ specifiers:
   '@types/sharp': ^0.30.1
   csstype: ^3.0.11
   dts-minify: ^0.3.0
+  gif-encoder-2: ^1.0.5
   gifenc: ^1.0.3
   glob: ^7.2.0
   gulp: ^4.0.2
@@ -26,6 +27,7 @@ specifiers:
 
 dependencies:
   csstype: 3.0.11
+  gif-encoder-2: 1.0.5
   gifenc: 1.0.3
   lodash.chunk: 4.2.0
   ndarray: 1.0.19
@@ -972,6 +974,10 @@ packages:
     resolution: {integrity: sha1-3BXKHGcjh8p2vTesCjlbogQqLCg=}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /gif-encoder-2/1.0.5:
+    resolution: {integrity: sha512-fsRAKbZuUoZ7FYGjpFElmflTkKwsn/CzAmL/xDl4558aTAgysIDCUF6AXWO8dmai/ApfZACbPVAM+vPezJXlFg==}
+    dev: false
 
   /gifenc/1.0.3:
     resolution: {integrity: sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==}

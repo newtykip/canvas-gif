@@ -1,9 +1,41 @@
 import sharp from 'sharp';
 import Frame, { FrameData } from './Frame';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import { Options } from './types';
+// import { GIFEncoder, quantize, applyPalette } from 'gifenc';
+import GIFEncoder from 'gif-encoder-2';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
+
+type Positive<T extends number> = number extends T
+	? never
+	: `${T}` extends `-${string}` | `${string}.${string}`
+	? never
+	: T;
+
+export interface Options<T extends number> {
+	/**
+	 * Whether the gif should first be coalesced
+	 * @default true
+	 */
+	coalesce?: boolean;
+
+	/**
+	 * How many times the GIF should repeat
+	 * @default 'forever'
+	 */
+	repeat?: Positive<T> | 'forever';
+
+	/**
+	 * How many frames to render per second
+	 * @default Source GIF frame count
+	 */
+	fps?: number;
+
+	/**
+	 * Whether the libary should log about its process when rendering GIFs
+	 * @default false
+	 */
+	verbose?: boolean;
+}
 
 interface FrameRange {
 	from: number;
@@ -46,13 +78,12 @@ type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
 
 // todo: add frames to the gif at specified places (append gif?)
 // todo: docs
+// todo: .applyEdits() ? .dumpFrames(dir) ?
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
 	private channels: number;
 	private encoder: GIFEncoder;
-	private repeat: number;
-	private delay: number;
 	private elements: Element[] = [];
 
 	public fontSize: number = 20;
@@ -77,15 +108,17 @@ export default class Gif<T extends number> {
 		this.channels = frames[0].channels;
 
 		// Instantiate the encoder
-		this.encoder = new GIFEncoder();
-		this.repeat = 0;
-		const fpsInteval = 1 / this.options.fps;
-		this.delay = fpsInteval * 1000;
+		this.encoder = new GIFEncoder(this.#width, this.#height);
+
+		let repeat = 0;
 
 		if (this.options.repeat !== 'forever') {
-			if (this.options.repeat === 1) this.repeat = -1;
-			else this.repeat = this.options.repeat;
+			if (this.options.repeat === 1) repeat = -1;
+			else repeat = this.options.repeat;
 		}
+
+		this.encoder.setFrameRate(this.options.fps);
+		this.encoder.setRepeat(repeat);
 	}
 
 	public get width() {
@@ -375,7 +408,7 @@ export default class Gif<T extends number> {
 		// todo: stop the image being placed off of the screen
 		this.elements.push({
 			overlay: {
-				input: await sharpImage.png().toBuffer(),
+				input: await sharpImage.toBuffer(),
 				top: y,
 				left: x,
 			},
@@ -566,6 +599,8 @@ export default class Gif<T extends number> {
 	 * Render the GIF into a buffer!
 	 */
 	public async render() {
+		this.encoder.start();
+
 		for (let i = 0; i < this.frames.length; i++) {
 			if (this.options.verbose) {
 				console.log(
@@ -585,22 +620,12 @@ export default class Gif<T extends number> {
 			frame.sharp = frame.sharp.composite(overlays);
 
 			// Write each frame to the encoder
-			const data = await frame.render();
-			const palette = quantize(data, 256);
-			const index = applyPalette(data, palette);
-
-			this.encoder.writeFrame(index, this.width, this.height, {
-				palette,
-				delay: this.delay,
-				repeat: this.repeat,
-			});
+			this.encoder.addFrame(await frame.render());
 		}
 
-		// Return the final buffer
 		this.encoder.finish();
-		const output = Buffer.from(this.encoder.buffer);
-		this.encoder = new GIFEncoder();
 
-		return output;
+		// Return the final buffer
+		return this.encoder.out.getData();
 	}
 }

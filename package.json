@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"csstype": "^3.0.11",
+		"gif-encoder-2": "^1.0.5",
 		"gifenc": "^1.0.3",
 		"lodash.chunk": "^4.2.0",
 		"ndarray": "^1.0.19",
