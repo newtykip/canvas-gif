@@ -1,7 +1,6 @@
 import sharp from 'sharp';
 import Frame, { FrameData } from './Frame';
-// import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import GIFEncoder from 'gif-encoder-2';
+import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
 
@@ -79,17 +78,20 @@ type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
 // todo: add frames to the gif at specified places (append gif?)
 // todo: docs
 // todo: .applyEdits() ? .dumpFrames(dir) ?
+// todo: border assertion
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
 	private channels: number;
 	private encoder: GIFEncoder;
+	private repeat: number;
+	private delay: number;
 	private elements: Element[] = [];
 
 	public fontSize: number = 20;
 	public fontName: string = 'sans';
 	public fontWeight: FontWeight = 'normal';
-	public frameCount: number;
+	public fps: number;
 
 	#brushColour: Hex = '#000000';
 	#width: number;
@@ -102,23 +104,25 @@ export default class Gif<T extends number> {
 
 		// Find information about the frames
 		this.frames = frames.map((frame) => new Frame(frame));
-		this.frameCount = this.frames.length;
 		this.#width = frames[0].width;
 		this.#height = frames[0].height;
 		this.channels = frames[0].channels;
+		this.fps = this.options.fps;
 
 		// Instantiate the encoder
-		this.encoder = new GIFEncoder(this.#width, this.#height);
-
-		let repeat = 0;
+		this.encoder = new GIFEncoder();
+		this.repeat = 0;
+		const fpsInteval = 1 / this.options.fps;
+		this.delay = fpsInteval * 1000;
 
 		if (this.options.repeat !== 'forever') {
-			if (this.options.repeat === 1) repeat = -1;
-			else repeat = this.options.repeat;
+			if (this.options.repeat === 1) this.repeat = -1;
+			else this.repeat = this.options.repeat;
 		}
+	}
 
-		this.encoder.setFrameRate(this.options.fps);
-		this.encoder.setRepeat(repeat);
+	public get frameCount() {
+		return this.frames.length;
 	}
 
 	public get width() {
@@ -151,14 +155,14 @@ export default class Gif<T extends number> {
 
 		const handleFrameRange = (range: FrameRange) => {
 			if (range.from <= 0) range.from = 1;
-			if (range.to > this.frames.length) range.to = this.frames.length;
+			if (range.to > this.frameCount) range.to = this.frameCount;
 			for (let i = range.from; i <= range.to; i++) {
 				if (!frameNumbers.includes(i)) frameNumbers.push(i);
 			}
 		};
 
 		if (!includedFrames) {
-			for (let i = 1; i <= this.frames.length; i++) {
+			for (let i = 1; i <= this.frameCount; i++) {
 				frameNumbers.push(i);
 			}
 		} else if (Array.isArray(includedFrames)) {
@@ -215,6 +219,45 @@ export default class Gif<T extends number> {
 		return output.trimLeft();
 	}
 
+	private drawBorder(
+		x: number,
+		y: number,
+		width: number,
+		height: number,
+		round: boolean,
+		includedFrames: IncludedFrames,
+		colour: Hex = this.brushColour,
+		thickness: number = 4
+	) {
+		const oldBrush = this.brushColour;
+		this.brushColour = colour;
+
+		if (round) {
+			this.drawCircle(
+				x + width / 2,
+				y + height / 2,
+				width / 2,
+				{
+					strokeWidth: `${thickness}px`,
+				},
+				includedFrames
+			);
+		} else {
+			this.drawRect(
+				x - thickness / 2,
+				y - thickness / 2,
+				width + thickness,
+				height + thickness,
+				{
+					strokeWidth: `${thickness}px`,
+				},
+				includedFrames
+			);
+		}
+
+		this.brushColour = oldBrush;
+	}
+
 	/**
 	 * Resize the GIF to newly specified dimensions!
 	 */
@@ -243,7 +286,7 @@ export default class Gif<T extends number> {
 		x: number,
 		y: number,
 		styles?: SVGProperties,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
@@ -276,7 +319,7 @@ export default class Gif<T extends number> {
 		width: number,
 		height: number,
 		styles?: SVGProperties,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
@@ -309,7 +352,7 @@ export default class Gif<T extends number> {
 		cy: number,
 		radius: number,
 		styles?: SVGProperties,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
@@ -342,7 +385,7 @@ export default class Gif<T extends number> {
 		options?: ImageOptions
 	) {
 		let { width, height, round, includedFrames, border } = options;
-		includedFrames ??= [{ from: 1, to: this.frames.length }];
+		includedFrames ??= [{ from: 1, to: this.frameCount }];
 
 		// Make sure the image can not be bigger than the background GIF
 		if (width > this.width) width = this.width;
@@ -371,39 +414,17 @@ export default class Gif<T extends number> {
 			]);
 		}
 
-		if (border) {
-			const oldBrush = this.brushColour;
-			if (typeof border !== 'boolean')
-				this.brushColour = border?.colour ?? oldBrush;
-
-			const thickness =
-				typeof border !== 'boolean' ? border?.thickness ?? 4 : 4;
-
-			if (round) {
-				this.drawCircle(
-					x + width / 2,
-					y + height / 2,
-					width / 2,
-					{
-						strokeWidth: `${thickness}px`,
-					},
-					includedFrames
-				);
-			} else {
-				this.drawRect(
-					x - thickness / 2,
-					y - thickness / 2,
-					width + thickness,
-					height + thickness,
-					{
-						strokeWidth: `${thickness}px`,
-					},
-					includedFrames
-				);
-			}
-
-			this.brushColour = oldBrush;
-		}
+		if (border)
+			this.drawBorder(
+				x,
+				y,
+				width,
+				height,
+				round,
+				null,
+				(border as any)?.colour,
+				(border as any)?.thickness
+			);
 
 		// todo: stop the image being placed off of the screen
 		this.elements.push({
@@ -416,7 +437,7 @@ export default class Gif<T extends number> {
 		});
 	}
 
-	// todo: account for differing fps - render the same image until a new one should show
+	// todo: test to ensure that the fps matches up
 	// todo: consider included frames
 	public async drawGif<T extends number>(
 		gif: Buffer | string | Gif<T>,
@@ -424,16 +445,20 @@ export default class Gif<T extends number> {
 		y: number,
 		options?: Omit<ImageOptions, 'includedFrames'> & {
 			loop?: boolean;
+			fps?: number;
 		}
 	) {
-		let { width, height, loop, round, border } = options;
+		let { width, height, loop, round, border, fps } = options;
 		loop ??= true;
 
 		if (typeof gif === 'string' || gif instanceof Buffer) {
-			const { frames, fps, width, height, channels } = await decodeGif(
-				gif,
-				this.options?.coalesce ?? true
-			);
+			const {
+				frames,
+				fps: gifFps,
+				width,
+				height,
+				channels,
+			} = await decodeGif(gif, this.options?.coalesce ?? true);
 
 			const { fps: oldFps, ...options } = this.options;
 
@@ -448,66 +473,49 @@ export default class Gif<T extends number> {
 					};
 				}),
 				{
-					fps,
+					fps: gifFps,
 					...(options as any),
 				}
 			);
 		}
 
 		const frameCount =
-			loop || gif.frames.length >= this.frames.length
-				? this.frames.length
-				: gif.frames.length;
+			loop || gif.frameCount >= this.frameCount
+				? this.frameCount
+				: gif.frameCount;
 
 		// Handle size changes
 		if (!width) width = gif.width;
 		if (!height) height = gif.height;
-		if (width > this.width) width = this.width;
-		if (height > this.height) height = this.height;
+		if (width > this.width || (!width && gif.width > this.width))
+			width = this.width;
+		if (height > this.height || gif.height > this.height)
+			height = this.height;
 
 		if (width !== gif.width || height !== gif.height)
 			gif.resize(width ?? gif.width, height ?? gif.height);
 
-		// If the size has not been customised, make sure the GIF is at most the same size as the base GIF
-		if (!width && gif.width > this.width)
-			gif.resize(this.width, gif.height);
-		if (gif.height > this.height) gif.resize(gif.width, this.height);
+		if (border)
+			this.drawBorder(
+				x,
+				y,
+				width,
+				height,
+				round,
+				null,
+				(border as any)?.colour,
+				(border as any)?.thickness
+			);
 
-		if (border) {
-			const oldBrush = this.brushColour;
-			if (typeof border !== 'boolean')
-				this.brushColour = border?.colour ?? oldBrush;
+		const sourceFramesPerInputFrame = Math.round(
+			this.fps / (fps ?? gif.fps)
+		);
 
-			const thickness =
-				typeof border !== 'boolean' ? border?.thickness ?? 4 : 4;
-
-			if (round) {
-				this.drawCircle(
-					x + width / 2,
-					y + height / 2,
-					width / 2,
-					{
-						strokeWidth: `${thickness}px`,
-					}
-					// includedFrames
-				);
-			} else {
-				this.drawRect(
-					x - thickness / 2,
-					y - thickness / 2,
-					width + thickness,
-					height + thickness,
-					{
-						strokeWidth: `${thickness}px`,
-					}
-					// includedFrames
-				);
-			}
-
-			this.brushColour = oldBrush;
-		}
+		let frameIndex = 0;
 
 		for (let i = 0; i < frameCount; i++) {
+			if (i % sourceFramesPerInputFrame === 0) frameIndex++;
+
 			const raw = !round
 				? {
 						width: gif.width,
@@ -516,7 +524,9 @@ export default class Gif<T extends number> {
 				  }
 				: null;
 
-			let sharp = gif.frames[loop ? i % gif.frames.length : i].sharp;
+			let sharp =
+				gif.frames[loop ? frameIndex % gif.frameCount : frameIndex]
+					.sharp;
 
 			if (round)
 				sharp = sharp
@@ -546,27 +556,27 @@ export default class Gif<T extends number> {
 
 	public tint(
 		rgb: RGB,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) => sharp.tint(rgb));
 	}
 
 	public grayscale(
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) => sharp.grayscale());
 	}
 
 	public rotate(
 		angle: number,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) => sharp.rotate(angle));
 	}
 
 	public flip(
 		axis: 'X' | 'Y',
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) =>
 			axis === 'Y' ? sharp.flip() : sharp.flop()
@@ -575,7 +585,7 @@ export default class Gif<T extends number> {
 
 	public blur(
 		radius?: number,
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		// sigma = 1 + radius / 2
 		return this.editFrames(includedFrames, (sharp) =>
@@ -584,13 +594,13 @@ export default class Gif<T extends number> {
 	}
 
 	public negate(
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) => sharp.negate());
 	}
 
 	public normalise(
-		includedFrames: IncludedFrames = [{ from: 1, to: this.frames.length }]
+		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
 	) {
 		return this.editFrames(includedFrames, (sharp) => sharp.normalise());
 	}
@@ -599,14 +609,12 @@ export default class Gif<T extends number> {
 	 * Render the GIF into a buffer!
 	 */
 	public async render() {
-		this.encoder.start();
-
-		for (let i = 0; i < this.frames.length; i++) {
+		for (let i = 0; i < this.frameCount; i++) {
 			if (this.options.verbose) {
 				console.log(
-					`Rendering frame ${i + 1}/${this.frames.length} (${(
+					`Rendering frame ${i + 1}/${this.frameCount} (${(
 						((i + 1) * 100) /
-						this.frames.length
+						this.frameCount
 					).toFixed(2)}%)`
 				);
 			}
@@ -620,12 +628,22 @@ export default class Gif<T extends number> {
 			frame.sharp = frame.sharp.composite(overlays);
 
 			// Write each frame to the encoder
-			this.encoder.addFrame(await frame.render());
+			const data = await frame.render();
+			const palette = quantize(data, 256);
+			const index = applyPalette(data, palette);
+
+			this.encoder.writeFrame(index, this.width, this.height, {
+				palette,
+				delay: this.delay,
+				repeat: this.repeat,
+			});
 		}
 
-		this.encoder.finish();
-
 		// Return the final buffer
-		return this.encoder.out.getData();
+		this.encoder.finish();
+		const output = Buffer.from(this.encoder.buffer);
+		this.encoder = new GIFEncoder();
+
+		return output;
 	}
 }

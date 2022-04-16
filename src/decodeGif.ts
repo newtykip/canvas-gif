@@ -1,7 +1,7 @@
 import { GifReader } from 'omggif';
 import ndarray from 'ndarray';
 import fs from 'fs';
-import chunk from 'lodash.chunk';
+import chunk from './chunk';
 
 function getGifPixels(buffer: Buffer) {
 	return new Promise<ndarray.NdArray<Uint8Array>>((resolve, reject) => {
@@ -39,7 +39,6 @@ function getGifPixels(buffer: Buffer) {
 				reject(err);
 			}
 
-			// @ts-expect-error
 			resolve(result.transpose(0, 2, 1));
 		} else {
 			nshape = [reader.height, reader.width, 4];
@@ -51,7 +50,6 @@ function getGifPixels(buffer: Buffer) {
 				reject(err);
 			}
 
-			// @ts-expect-error
 			resolve(result.transpose(1, 0));
 		}
 	});

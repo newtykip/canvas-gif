@@ -4,7 +4,7 @@ const typescript = require('gulp-typescript');
 const ttypescript = require('ttypescript');
 const { createMinifier } = require('dts-minify');
 const tsMinifier = createMinifier(ttypescript);
-const glob = require('glob');
+const glob = require('tiny-glob');
 const fs = require('fs');
 const rimraf = require('rimraf');
 
@@ -31,19 +31,22 @@ gulp.task('minify:ts', () => {
 gulp.task(
 	'minify:dts',
 	() =>
-		new Promise((resolve, reject) => {
-			glob('dist/**/*.d.ts', (err, files) => {
-				if (err) return reject(err);
+		new Promise(async (resolve) => {
+			const toDelete = ['dist/decodeGif.d.ts', 'dist/chunk.d.ts'];
+			const files = (await glob('dist/**/*.d.ts')).filter(
+				(file) => !toDelete.includes(file)
+			);
 
-				files.forEach((file) => {
-					const content = fs.readFileSync(file).toString();
-					const minified = tsMinifier.minify(content);
+			files.forEach((file) => {
+				const content = fs.readFileSync(file).toString();
+				const minified = tsMinifier.minify(content);
 
-					fs.writeFileSync(file, minified);
-				});
-
-				resolve();
+				fs.writeFileSync(file, minified);
 			});
+
+			toDelete.forEach((file) => fs.rmSync(file));
+
+			resolve();
 		})
 );
 

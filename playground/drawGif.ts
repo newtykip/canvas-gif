@@ -14,10 +14,7 @@ async function doStuff() {
 	});
 
 	const catCube = await canvasGif(
-		fs.readFileSync(path.resolve(__dirname, 'input.gif')),
-		{
-			fps: 15,
-		}
+		fs.readFileSync(path.resolve(__dirname, 'input.gif'))
 	);
 
 	const taiga = await canvasGif(
@@ -37,8 +34,14 @@ async function doStuff() {
 		border: true,
 	});
 
-	const result = await rubiksCube.render();
+	await rubiksCube.drawGif(taiga, 150, 300, {
+		width: 150,
+		height: 150,
+		round: true,
+		fps: taiga.fps / 2,
+	});
 
+	const result = await rubiksCube.render();
 	const endTime = performance.now();
 	console.log(`Finished in ${endTime - startTime}ms!`);
 
