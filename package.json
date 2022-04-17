@@ -12,12 +12,14 @@
 	},
 	"dependencies": {
 		"csstype": "^3.0.11",
+		"file-type": "16.5.3",
 		"gifenc": "^1.0.3",
 		"ndarray": "^1.0.19",
 		"omggif": "^1.0.10",
 		"sharp": "^0.30.3"
 	},
 	"devDependencies": {
+		"@types/ndarray": "^1.0.11",
 		"@types/node": "17.0.24",
 		"@types/omggif": "^1.0.3",
 		"@types/sharp": "^0.30.2",

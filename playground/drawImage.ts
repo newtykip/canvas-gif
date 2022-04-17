@@ -1,5 +1,5 @@
 import { performance } from 'perf_hooks';
-import canvasGif from '../src';
+import Gif from '../src';
 import fs from 'fs';
 import path from 'path';
 
@@ -8,12 +8,7 @@ const dog = fs.readFileSync(path.resolve(__dirname, 'dog.png'));
 const startTime = performance.now();
 
 async function doStuff() {
-	const gif = await canvasGif(path.resolve(__dirname, 'input.gif'), {
-		coalesce: false, // whether the gif should be coalesced first, default: true
-		repeat: 'forever', // how many times the GIF should repeat, default: 'forever'
-		fps: 30, // the amount of frames to render per second, default: source gif frame count!
-		verbose: true, // whether it should log about its rendering process, default: false
-	});
+	const gif = new Gif(400, 400, 30);
 
 	const options = {
 		width: 100,

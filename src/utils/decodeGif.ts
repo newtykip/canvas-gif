@@ -39,6 +39,7 @@ function getGifPixels(buffer: Buffer) {
 				reject(err);
 			}
 
+			// @ts-expect-error
 			resolve(result.transpose(0, 2, 1));
 		} else {
 			nshape = [reader.height, reader.width, 4];
@@ -50,6 +51,7 @@ function getGifPixels(buffer: Buffer) {
 				reject(err);
 			}
 
+			// @ts-expect-error
 			resolve(result.transpose(1, 0));
 		}
 	});

@@ -32,7 +32,8 @@ gulp.task(
 	'minify:dts',
 	() =>
 		new Promise(async (resolve) => {
-			const toDelete = ['dist/decodeGif.d.ts', 'dist/chunk.d.ts'];
+			const toDelete = [...(await glob('dist/utils/**/*.d.ts'))];
+
 			const files = (await glob('dist/**/*.d.ts')).filter(
 				(file) => !toDelete.includes(file)
 			);
