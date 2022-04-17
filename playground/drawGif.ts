@@ -7,7 +7,7 @@ const startTime = performance.now();
 
 async function doStuff() {
 	const rubiksCube = await Gif.fromPath(
-		path.resolve(__dirname, 'input2.gif'),
+		path.resolve(__dirname, 'input.gif'),
 		{
 			coalesce: false, // whether the gif should be coalesced first, default: true
 			repeat: 'forever', // how many times the GIF should repeat, default: 'forever'
@@ -16,27 +16,16 @@ async function doStuff() {
 		}
 	);
 
-	const catCube = await Gif.fromPath(path.resolve(__dirname, 'input.gif'));
 	const taiga = await Gif.fromPath(path.resolve(__dirname, 'taiga.gif'));
+	taiga.resize(150, 150);
 
-	await rubiksCube.drawGif(catCube, 0, 0, {
-		width: 150,
-		height: 150,
-		border: true,
+	await rubiksCube.drawGif(taiga, 25, 100, {
+		round: true,
 	});
 
-	await rubiksCube.drawGif(taiga, 150, 100, {
-		width: 150,
-		height: 150,
+	await rubiksCube.drawGif(taiga, rubiksCube.width - taiga.width - 25, 100, {
 		round: true,
-		border: true,
-	});
-
-	await rubiksCube.drawGif(taiga, 150, 300, {
-		width: 150,
-		height: 150,
-		round: true,
-		fps: taiga.fps / 2,
+		fps: taiga.fps / 4,
 	});
 
 	const result = await rubiksCube.render();
