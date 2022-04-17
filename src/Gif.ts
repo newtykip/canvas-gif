@@ -3,6 +3,8 @@ import Frame, { FrameData } from './Frame';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import decodeGif from './decodeGif';
 import type CSS from 'csstype';
+import fs from 'fs';
+import path from 'path';
 
 type Positive<T extends number> = number extends T
 	? never
@@ -21,7 +23,7 @@ export interface Options<T extends number> {
 	 * How many times the GIF should repeat
 	 * @default 'forever'
 	 */
-	repeat?: Positive<T> | 'forever';
+	repeat?: Repeat<T>;
 
 	/**
 	 * How many frames to render per second
@@ -41,7 +43,7 @@ interface FrameRange {
 	to: number;
 }
 
-interface Element {
+interface QueuePiece {
 	overlay: sharp.OverlayOptions;
 	frames: number[];
 }
@@ -74,31 +76,30 @@ type IncludedFrames = FrameRange | FrameRange[] | number | number[];
 type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
 type Hex = `#${string}`;
 type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
+type Repeat<T extends number> = Positive<T> | 'forever';
 
 // todo: add frames to the gif at specified places (append gif?)
-// todo: docs
-// todo: .applyEdits() ? .dumpFrames(dir) ?
 // todo: border assertion
 export default class Gif<T extends number> {
 	private frames: Frame[];
 	private options: Options<T>;
 	private channels: number;
 	private encoder: GIFEncoder;
-	private repeat: number;
 	private delay: number;
-	private elements: Element[] = [];
+	private queue: QueuePiece[] = [];
 
 	public fontSize: number = 20;
 	public fontName: string = 'sans';
 	public fontWeight: FontWeight = 'normal';
-	public fps: number;
 
-	#brushColour: Hex = '#000000';
+	public repeat: Repeat<T>;
+	public brushColour: Hex = '#000000';
+	#fps: number;
 	#width: number;
 	#height: number;
 
 	// todo: allow for the creation of gifs from an empty canvas
-	constructor(frames: FrameData[], options: Options<T>) {
+	constructor(frames?: FrameData[], options?: Options<T>) {
 		// Store the options
 		this.options = options;
 
@@ -111,14 +112,18 @@ export default class Gif<T extends number> {
 
 		// Instantiate the encoder
 		this.encoder = new GIFEncoder();
-		this.repeat = 0;
+		this.repeat = this.options.repeat ?? 'forever';
+	}
+
+	public get fps() {
+		return this.#fps;
+	}
+
+	public set fps(newFps: number) {
+		this.#fps = newFps;
+
 		const fpsInteval = 1 / this.options.fps;
 		this.delay = fpsInteval * 1000;
-
-		if (this.options.repeat !== 'forever') {
-			if (this.options.repeat === 1) this.repeat = -1;
-			else this.repeat = this.options.repeat;
-		}
 	}
 
 	public get frameCount() {
@@ -141,16 +146,10 @@ export default class Gif<T extends number> {
 		this.resize(this.width, newHeight);
 	}
 
-	public get brushColour() {
-		return this.#brushColour;
-	}
-
-	// todo: allow for non-hex colours
-	public set brushColour(hex: Hex) {
-		this.#brushColour = hex;
-	}
-
-	private generateFrameRange(includedFrames: IncludedFrames) {
+	/**
+	 * Turn an included frames object into a list of frame numbers.
+	 */
+	private generateFrameRange(includedFrames: IncludedFrames): number[] {
 		let frameNumbers: number[] = [];
 
 		const handleFrameRange = (range: FrameRange) => {
@@ -182,10 +181,13 @@ export default class Gif<T extends number> {
 		return frameNumbers;
 	}
 
+	/**
+	 * Mass edit a bunch of frames with the same method.
+	 */
 	private editFrames(
 		includedFrames: IncludedFrames,
 		callback: (sharp: sharp.Sharp) => sharp.Sharp
-	) {
+	): this {
 		const frameNumbers = this.generateFrameRange(includedFrames);
 
 		for (const frame of this.frames) {
@@ -219,6 +221,9 @@ export default class Gif<T extends number> {
 		return output.trimLeft();
 	}
 
+	/**
+	 * Utility to quickly draw borders!
+	 */
 	private drawBorder(
 		x: number,
 		y: number,
@@ -228,7 +233,7 @@ export default class Gif<T extends number> {
 		includedFrames: IncludedFrames,
 		colour: Hex = this.brushColour,
 		thickness: number = 4
-	) {
+	): this {
 		const oldBrush = this.brushColour;
 		this.brushColour = colour;
 
@@ -256,19 +261,23 @@ export default class Gif<T extends number> {
 		}
 
 		this.brushColour = oldBrush;
+		return this;
 	}
 
 	/**
 	 * Resize the GIF to newly specified dimensions!
 	 */
-	public resize(width: number, height: number) {
+	public resize(width: number, height: number): this {
 		this.#width = width;
 		this.#height = height;
 
 		return this.editFrames(null, (sharp) => sharp.resize(width, height));
 	}
 
-	public crop(x: number, y: number, width: number, height: number) {
+	/**
+	 * Crop the GIF to newly specified dimensions!
+	 */
+	public crop(x: number, y: number, width: number, height: number): this {
 		this.#width = width;
 		this.#height = height;
 
@@ -287,7 +296,7 @@ export default class Gif<T extends number> {
 		y: number,
 		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
     <text x="${x}px" y="${y}px" ${this.stylesToString({
@@ -300,7 +309,7 @@ export default class Gif<T extends number> {
 </svg>
 		`);
 
-		this.elements.push({
+		this.queue.push({
 			overlay: {
 				input: svg,
 			},
@@ -320,7 +329,7 @@ export default class Gif<T extends number> {
 		height: number,
 		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
 	<rect width="${width}px" height="${height}px" x="${x}px" y="${y}px" ${this.stylesToString(
@@ -334,7 +343,7 @@ export default class Gif<T extends number> {
 </svg>
 		`);
 
-		this.elements.push({
+		this.queue.push({
 			overlay: {
 				input: svg,
 			},
@@ -353,7 +362,7 @@ export default class Gif<T extends number> {
 		radius: number,
 		styles?: SVGProperties,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		const svg = Buffer.from(`
 <svg width="${this.width}" height="${this.height}">
 	<circle cx="${cx}px" cy="${cy}px" r="${radius}px" ${this.stylesToString({
@@ -365,7 +374,7 @@ export default class Gif<T extends number> {
 </svg>
 		`);
 
-		this.elements.push({
+		this.queue.push({
 			overlay: {
 				input: svg,
 			},
@@ -427,7 +436,7 @@ export default class Gif<T extends number> {
 			);
 
 		// todo: stop the image being placed off of the screen
-		this.elements.push({
+		this.queue.push({
 			overlay: {
 				input: await sharpImage.toBuffer(),
 				top: y,
@@ -439,6 +448,9 @@ export default class Gif<T extends number> {
 
 	// todo: test to ensure that the fps matches up
 	// todo: consider included frames
+	/**
+	 * Draw a GIF over the GIF!
+	 */
 	public async drawGif<T extends number>(
 		gif: Buffer | string | Gif<T>,
 		x: number,
@@ -508,7 +520,7 @@ export default class Gif<T extends number> {
 			);
 
 		const sourceFramesPerInputFrame = Math.round(
-			this.fps / (fps ?? gif.fps)
+			this.#fps / (fps ?? gif.#fps)
 		);
 
 		let frameIndex = 0;
@@ -538,7 +550,7 @@ export default class Gif<T extends number> {
 					])
 					.png();
 
-			this.elements.push({
+			this.queue.push({
 				overlay: {
 					input: await sharp.toBuffer(),
 					top: y,
@@ -552,80 +564,95 @@ export default class Gif<T extends number> {
 		return this;
 	}
 
-	// sharp parity
+	// todo: test sharp parity
 
+	/**
+	 * Tint the GIF using the provided chroma while preserving the image luminance
+	 */
 	public tint(
 		rgb: RGB,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) => sharp.tint(rgb));
 	}
 
+	/**
+	 * Convert the GIF to 8-bit greyscale; 256 shades of grey
+	 */
 	public grayscale(
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) => sharp.grayscale());
 	}
 
+	/**
+	 * Rotate the GIF by an angle!
+	 */
 	public rotate(
 		angle: number,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) => sharp.rotate(angle));
 	}
 
+	/**
+	 * Flip/flop the GIF about an axis!
+	 */
 	public flip(
 		axis: 'X' | 'Y',
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) =>
 			axis === 'Y' ? sharp.flip() : sharp.flop()
 		);
 	}
 
+	/**
+	 * Blur the GIF. When used without a radius, performs a fast, mild blur of the output image. When a radius is provided, performs a slower, more accurate Gaussian blur.
+	 */
 	public blur(
 		radius?: number,
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		// sigma = 1 + radius / 2
 		return this.editFrames(includedFrames, (sharp) =>
 			sharp.blur(radius ? 1 + radius / 2 : null)
 		);
 	}
 
+	/**
+	 * Produce the "negative" of the GIF
+	 */
 	public negate(
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) => sharp.negate());
 	}
 
+	/**
+	 * Enhance output image contrast by stretching its luminance to cover the full dynamic range.
+	 */
 	public normalise(
 		includedFrames: IncludedFrames = [{ from: 1, to: this.frameCount }]
-	) {
+	): this {
 		return this.editFrames(includedFrames, (sharp) => sharp.normalise());
 	}
 
 	/**
-	 * Render the GIF into a buffer!
+	 * Render the GIF as a Buffer!
 	 */
-	public async render() {
-		for (let i = 0; i < this.frameCount; i++) {
+	public async render(): Promise<Buffer> {
+		this.applyEdits();
+
+		for (const frame of this.frames) {
 			if (this.options.verbose) {
 				console.log(
-					`Rendering frame ${i + 1}/${this.frameCount} (${(
-						((i + 1) * 100) /
+					`Rendering frame ${frame.number}/${this.frameCount} (${(
+						(frame.number * 100) /
 						this.frameCount
 					).toFixed(2)}%)`
 				);
 			}
-
-			// Render the edits to each frame from the elements system
-			const frame = this.frames[i];
-			const overlays = this.elements
-				.filter((layer) => layer.frames.includes(frame.number))
-				.map((layer) => layer.overlay);
-
-			frame.sharp = frame.sharp.composite(overlays);
 
 			// Write each frame to the encoder
 			const data = await frame.render();
@@ -635,7 +662,12 @@ export default class Gif<T extends number> {
 			this.encoder.writeFrame(index, this.width, this.height, {
 				palette,
 				delay: this.delay,
-				repeat: this.repeat,
+				repeat:
+					this.repeat === 'forever'
+						? 0
+						: this.repeat === 1
+						? -1
+						: this.repeat,
 			});
 		}
 
@@ -645,5 +677,36 @@ export default class Gif<T extends number> {
 		this.encoder = new GIFEncoder();
 
 		return output;
+	}
+
+	/**
+	 * Apply all of the edits currently in the queue, and then clear it!
+	 */
+	public applyEdits(): this {
+		for (const frame of this.frames) {
+			const overlays = this.queue
+				.filter((layer) => layer.frames.includes(frame.number))
+				.map((layer) => layer.overlay);
+
+			frame.sharp = frame.sharp.composite(overlays);
+		}
+
+		this.queue = [];
+		return this;
+	}
+
+	/**
+	 * Dump all of the frames in their current state into a folder.
+	 * @see If the output is not as expected, try running .applyEdits() first!
+	 */
+	public dumpFrames(folderPath: string) {
+		if (!fs.existsSync(folderPath))
+			fs.mkdirSync(folderPath, { recursive: true });
+
+		for (const frame of this.frames) {
+			frame.sharp.toFile(path.resolve(folderPath, `${frame.number}.png`));
+		}
+
+		return this;
 	}
 }
