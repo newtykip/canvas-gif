@@ -16,6 +16,7 @@
 		"gifenc": "^1.0.3",
 		"ndarray": "^1.0.19",
 		"omggif": "^1.0.10",
+		"rgbquant": "^1.1.2",
 		"sharp": "^0.30.3"
 	},
 	"devDependencies": {

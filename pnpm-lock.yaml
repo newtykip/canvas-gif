@@ -15,6 +15,7 @@ specifiers:
   gulp-uglify: ^3.0.2
   ndarray: ^1.0.19
   omggif: ^1.0.10
+  rgbquant: ^1.1.2
   rimraf: ^3.0.2
   sharp: ^0.30.3
   tiny-glob: ^0.2.9
@@ -28,6 +29,7 @@ dependencies:
   gifenc: 1.0.3
   ndarray: 1.0.19
   omggif: 1.0.10
+  rgbquant: 1.1.2
   sharp: 0.30.3
 
 devDependencies:
@@ -2113,6 +2115,10 @@ packages:
     resolution: {integrity: sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==}
     engines: {node: '>=0.12'}
     dev: true
+
+  /rgbquant/1.1.2:
+    resolution: {integrity: sha1-2V6Imo/LHmwaT6LMyL46QaL80YU=}
+    dev: false
 
   /rimraf/3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}

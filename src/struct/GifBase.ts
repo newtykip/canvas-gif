@@ -6,6 +6,7 @@ import path from 'path';
 import Frame from './Frame';
 import type { Options, Repeat } from '../types/Options';
 import Gif from '..';
+import RgbQuant from 'rgbquant';
 
 interface FrameRange {
 	from: number;
@@ -625,7 +626,16 @@ export default class GifBase {
 
 			// Write each frame to the encoder
 			const data = await frame.render();
-			const palette = quantize(data, 256);
+			const quantizer = new RgbQuant({
+				colors: 256,
+				dithKern:
+					this.options.dither === null
+						? null
+						: this.options.dither ?? 'FloydSteinberg',
+			});
+			quantizer.sample(data);
+
+			const palette = quantizer.palette(true);
 			const index = applyPalette(data, palette);
 
 			this.encoder.writeFrame(index, this.width, this.height, {

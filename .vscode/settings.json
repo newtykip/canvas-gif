@@ -7,7 +7,7 @@
 		"**/.DS_Store": true,
 		"**/Thumbs.db": true,
 		"**/.prettierrc": true,
-		"**/pnpm-lock.yaml": true,
-		"**/node_modules": true
+		"**/pnpm-lock.yaml": true
+		// "**/node_modules": true
 	}
 }
