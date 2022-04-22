@@ -47,8 +47,6 @@ class Gif extends GifBase {
 		);
 
 		return new GeneratedGif(
-			width,
-			height,
 			frames.map((data, i) => {
 				return {
 					data,

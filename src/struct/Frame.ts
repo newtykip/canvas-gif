@@ -9,7 +9,7 @@ export default class Frame {
 		this.sharp = sharp;
 	}
 
-	async render() {
-		return new Uint8ClampedArray(await this.sharp.toBuffer());
+	render() {
+		return this.sharp.toBuffer();
 	}
 }

@@ -12,13 +12,13 @@ interface FrameData {
 }
 
 export default class GeneratedGif extends GifBase {
-	constructor(
-		width: number,
-		height: number,
-		frameData: FrameData[],
-		options?: Options
-	) {
-		super(width, height, frameData[0].channels, options);
+	constructor(frameData: FrameData[], options?: Options) {
+		super(
+			frameData[0]?.width,
+			frameData[0]?.height,
+			frameData[0].channels,
+			options
+		);
 
 		for (const data of frameData) {
 			const frame = new Frame(

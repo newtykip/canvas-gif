@@ -7,7 +7,7 @@ const startTime = performance.now();
 
 async function doStuff() {
 	const rubiksCube = await Gif.fromPath(
-		path.resolve(__dirname, 'input.gif'),
+		path.resolve(__dirname, 'input2.gif'),
 		{
 			coalesce: false, // whether the gif should be coalesced first, default: true
 			repeat: 'forever', // how many times the GIF should repeat, default: 'forever'

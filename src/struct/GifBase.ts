@@ -1,12 +1,12 @@
 import sharp from 'sharp';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import type CSS from 'csstype';
 import fs from 'fs';
 import path from 'path';
 import Frame from './Frame';
 import type { Options, Repeat } from '../types/Options';
 import Gif from '..';
-import RgbQuant from 'rgbquant';
+import gm from 'gm';
+import os from 'os';
 
 interface FrameRange {
 	from: number;
@@ -61,7 +61,6 @@ export default class GifBase {
 	#channels: number;
 
 	private options: Options;
-	private encoder: GIFEncoder;
 	private delay: number;
 	private queue: QueuePiece[] = [];
 
@@ -87,8 +86,6 @@ export default class GifBase {
 		this.#width = width;
 		this.#height = height;
 		this.#channels = channels;
-
-		this.encoder = new GIFEncoder();
 
 		this.repeat = this.options?.repeat ?? defaultOptions.repeat;
 		this.fps = this.options?.fps ?? defaultOptions.fps;
@@ -183,7 +180,10 @@ export default class GifBase {
 		const frameNumbers = this.generateFrameRange(includedFrames);
 
 		for (const frame of this.frames) {
-			if (frameNumbers.includes(frame.number)) {
+			if (
+				(includedFrames && frameNumbers.includes(frame.number)) ||
+				!includedFrames
+			) {
 				frame.sharp = callback(frame.sharp);
 			}
 		}
@@ -614,48 +614,31 @@ export default class GifBase {
 	public async render(): Promise<Buffer> {
 		this.applyEdits();
 
-		for (const frame of this.frames) {
-			if (this.options?.verbose) {
-				console.log(
-					`Rendering frame ${frame.number}/${this.frameCount} (${(
-						(frame.number * 100) /
-						this.frameCount
-					).toFixed(2)}%)`
-				);
-			}
+		const gif = gm(this.width, this.height).setFormat('gif');
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gif-'));
 
-			// Write each frame to the encoder
-			const data = await frame.render();
-			const quantizer = new RgbQuant({
-				colors: 256,
-				dithKern:
-					this.options.dither === null
-						? null
-						: this.options.dither ?? 'FloydSteinberg',
-			});
-			quantizer.sample(data);
+		await this.dumpFrames(tempDir);
 
-			const palette = quantizer.palette(true);
-			const index = applyPalette(data, palette);
-
-			this.encoder.writeFrame(index, this.width, this.height, {
-				palette,
-				delay: this.delay,
-				repeat:
-					this.repeat === 'forever'
-						? 0
-						: this.repeat === 1
-						? -1
-						: this.repeat,
-			});
+		for (const file of fs.readdirSync(tempDir).sort((a, b) =>
+			a.localeCompare(b, undefined, {
+				numeric: true,
+				sensitivity: 'base',
+			})
+		)) {
+			console.log(file);
+			gif.in(path.join(tempDir, file));
 		}
 
-		// Return the final buffer
-		this.encoder.finish();
-		const output = Buffer.from(this.encoder.buffer);
-		this.encoder = new GIFEncoder();
+		gif.delay(this.delay / 10); // todo: custom delay
 
-		return output;
+		return new Promise<Buffer>((resolve, reject) =>
+			gif.toBuffer((err, buffer) => {
+				fs.rmSync(tempDir, { recursive: true, force: true });
+
+				if (err) reject(err);
+				else resolve(buffer);
+			})
+		);
 	}
 
 	/**
@@ -678,14 +661,21 @@ export default class GifBase {
 	 * Dump all of the frames in their current state into a folder.
 	 * @see If the output is not as expected, try running .applyEdits() first!
 	 */
-	public dumpFrames(folderPath: string) {
+	// todo: find suitable formats
+	public dumpFrames(folderPath: string, format: string = 'png') {
 		if (!fs.existsSync(folderPath))
 			fs.mkdirSync(folderPath, { recursive: true });
 
+		const frames: Promise<sharp.OutputInfo>[] = [];
+
 		for (const frame of this.frames) {
-			frame.sharp.toFile(path.resolve(folderPath, `${frame.number}.png`));
+			frames.push(
+				frame.sharp.toFile(
+					path.resolve(folderPath, `${frame.number}.${format}`)
+				)
+			);
 		}
 
-		return this;
+		return Promise.all(frames);
 	}
 }
