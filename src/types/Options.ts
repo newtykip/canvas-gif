@@ -32,18 +32,16 @@ export interface Options {
 	verbose?: boolean;
 
 	/**
-	 * Should each frame be dithered first? And if so, which algorithm should it use?
-	 * Set to null to disable dithering.
-	 * @default 'FloydSteinberg'
+	 * Whether GraphicsMagick should be used when encoding GIFs
+	 * @default true
 	 */
-	dither?:
-		| 'FloydSteinberg'
-		| 'FalseFloydSteinberg'
-		| 'Stucki'
-		| 'Atkinson'
-		| 'Jarvis'
-		| 'Burkes'
-		| 'Sierra'
-		| 'TwoSierra'
-		| 'SierraLite';
+	gm?: boolean;
 }
+
+export const defaultOptions: Options = {
+	coalesce: true,
+	repeat: 'forever',
+	fps: 30,
+	verbose: false,
+	gm: true,
+};

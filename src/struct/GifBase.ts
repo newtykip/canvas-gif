@@ -4,9 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import Frame from './Frame';
 import type { Options, Repeat } from '../types/Options';
+import { defaultOptions } from '../types/Options';
 import Gif from '..';
 import gm from 'gm';
 import os from 'os';
+import isGmInstalled from 'gm-installed';
+import GifEncoder from 'gif-encoder-2';
 
 interface FrameRange {
 	from: number;
@@ -47,13 +50,6 @@ type FontWeight = 'normal' | 'bold' | 'bolder' | 'lighter' | number;
 type Hex = `#${string}`;
 type SVGProperties = Omit<CSS.SvgProperties, 'stroke'>;
 
-export const defaultOptions: Options = {
-	coalesce: true,
-	repeat: 'forever',
-	fps: 30,
-	verbose: false,
-};
-
 // todo: add frames to the gif at specified places (append gif?)
 // todo: border assertion
 export default class GifBase {
@@ -89,6 +85,9 @@ export default class GifBase {
 
 		this.repeat = this.options?.repeat ?? defaultOptions.repeat;
 		this.fps = this.options?.fps ?? defaultOptions.fps;
+		this.options.verbose ??= defaultOptions.verbose;
+		this.options.gm ??= defaultOptions.gm;
+		this.options.coalesce ??= defaultOptions.coalesce;
 	}
 
 	public get channels() {
@@ -614,31 +613,58 @@ export default class GifBase {
 	public async render(): Promise<Buffer> {
 		this.applyEdits();
 
-		const gif = gm(this.width, this.height).setFormat('gif');
-		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gif-'));
+		// GM encoding
+		if (this.options?.gm && isGmInstalled()) {
+			const gif = gm(this.width, this.height).setFormat('gif');
+			// todo: research whether this can be done without disk writes
+			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gif-'));
 
-		await this.dumpFrames(tempDir);
+			await this.dumpFrames(tempDir);
 
-		for (const file of fs.readdirSync(tempDir).sort((a, b) =>
-			a.localeCompare(b, undefined, {
-				numeric: true,
-				sensitivity: 'base',
-			})
-		)) {
-			console.log(file);
-			gif.in(path.join(tempDir, file));
+			for (const file of fs.readdirSync(tempDir).sort((a, b) =>
+				a.localeCompare(b, undefined, {
+					numeric: true,
+					sensitivity: 'base',
+				})
+			)) {
+				gif.in(path.join(tempDir, file));
+			}
+
+			gif.delay(this.delay / 10);
+
+			return new Promise<Buffer>((resolve, reject) =>
+				gif.toBuffer((err, buffer) => {
+					fs.rmSync(tempDir, { recursive: true, force: true });
+
+					if (err) reject(err);
+					else resolve(buffer);
+				})
+			);
 		}
 
-		gif.delay(this.delay / 10); // todo: custom delay
+		// Backup GIF encoding
+		// todo: remove the need for this, bundle gm in with the package
+		else {
+			const gif = new GifEncoder(this.width, this.height);
 
-		return new Promise<Buffer>((resolve, reject) =>
-			gif.toBuffer((err, buffer) => {
-				fs.rmSync(tempDir, { recursive: true, force: true });
+			if (this.options?.gm && this.options?.verbose) {
+				console.log(
+					'You have the gm option enabled, but I can not seem to find GraphicsMagick installed on your system! Please make sure that it is accessible in your PATH (:'
+				);
+			}
 
-				if (err) reject(err);
-				else resolve(buffer);
-			})
-		);
+			gif.setDelay(this.delay);
+			gif.setRepeat(this.repeat === 'forever' ? 0 : this.repeat);
+			gif.start();
+
+			for (const frame of this.frames) {
+				gif.addFrame(await frame.getPixelData());
+			}
+
+			gif.finish();
+
+			return gif.out.getData();
+		}
 	}
 
 	/**

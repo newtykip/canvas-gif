@@ -13,12 +13,11 @@
 	"dependencies": {
 		"csstype": "^3.0.11",
 		"file-type": "16.5.3",
-		"gifenc": "^1.0.3",
+		"gif-encoder-2": "^1.0.5",
 		"gm": "^1.23.1",
 		"gm-installed": "^1.0.11",
 		"ndarray": "^1.0.19",
 		"omggif": "^1.0.10",
-		"rgbquant": "^1.1.2",
 		"sharp": "^0.30.3"
 	},
 	"devDependencies": {

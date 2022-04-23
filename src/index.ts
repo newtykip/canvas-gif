@@ -1,5 +1,6 @@
 import type { Options } from './types/Options';
-import GifBase, { defaultOptions } from './struct/GifBase';
+import { defaultOptions } from './types/Options';
+import GifBase from './struct/GifBase';
 import GeneratedGif from './struct/GeneratedGif';
 import decodeGif from './utils/decodeGif';
 import { fromBuffer as getFileType } from 'file-type';

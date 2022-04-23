@@ -9,7 +9,7 @@ specifiers:
   csstype: ^3.0.11
   dts-minify: ^0.3.0
   file-type: 16.5.3
-  gifenc: ^1.0.3
+  gif-encoder-2: ^1.0.5
   gm: ^1.23.1
   gm-installed: ^1.0.11
   gulp: ^4.0.2
@@ -18,7 +18,6 @@ specifiers:
   gulp-uglify: ^3.0.2
   ndarray: ^1.0.19
   omggif: ^1.0.10
-  rgbquant: ^1.1.2
   rimraf: ^3.0.2
   sharp: ^0.30.3
   tiny-glob: ^0.2.9
@@ -29,12 +28,11 @@ specifiers:
 dependencies:
   csstype: 3.0.11
   file-type: 16.5.3
-  gifenc: 1.0.3
+  gif-encoder-2: 1.0.5
   gm: 1.23.1
   gm-installed: 1.0.11
   ndarray: 1.0.19
   omggif: 1.0.10
-  rgbquant: 1.1.2
   sharp: 0.30.3
 
 devDependencies:
@@ -1000,8 +998,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /gifenc/1.0.3:
-    resolution: {integrity: sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==}
+  /gif-encoder-2/1.0.5:
+    resolution: {integrity: sha512-fsRAKbZuUoZ7FYGjpFElmflTkKwsn/CzAmL/xDl4558aTAgysIDCUF6AXWO8dmai/ApfZACbPVAM+vPezJXlFg==}
     dev: false
 
   /github-from-package/0.0.0:
@@ -2184,10 +2182,6 @@ packages:
     resolution: {integrity: sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==}
     engines: {node: '>=0.12'}
     dev: true
-
-  /rgbquant/1.1.2:
-    resolution: {integrity: sha1-2V6Imo/LHmwaT6LMyL46QaL80YU=}
-    dev: false
 
   /rimraf/3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
