@@ -10,6 +10,7 @@ export default class Frame {
 	}
 
 	async getPixelData() {
-		return new Uint8ClampedArray(await this.sharp.toBuffer());
+		const buffer = await this.sharp.toBuffer();
+		return new Uint8ClampedArray(buffer);
 	}
 }

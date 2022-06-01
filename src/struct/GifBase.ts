@@ -6,10 +6,7 @@ import Frame from './Frame';
 import type { Options, Repeat } from '../types/Options';
 import { defaultOptions } from '../types/Options';
 import Gif from '..';
-import gm from 'gm';
-import os from 'os';
-import isGmInstalled from 'gm-installed';
-import GifEncoder from 'gif-encoder-2';
+import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 
 interface FrameRange {
 	from: number;
@@ -75,7 +72,7 @@ export default class GifBase {
 		width: number,
 		height: number,
 		channels: number,
-		options?: Options
+		options: Options = {}
 	) {
 		this.options = options;
 
@@ -382,7 +379,7 @@ export default class GifBase {
 		image: Buffer | sharp.Sharp,
 		x: number,
 		y: number,
-		options?: ImageOptions
+		options: ImageOptions = {}
 	) {
 		let { width, height, round, includedFrames, border } = options;
 		includedFrames ??= [{ from: 1, to: this.frameCount }];
@@ -446,10 +443,10 @@ export default class GifBase {
 		gif: Buffer | GifBase,
 		x: number,
 		y: number,
-		options?: Omit<ImageOptions, 'includedFrames'> & {
+		options: Omit<ImageOptions, 'includedFrames'> & {
 			loop?: boolean;
 			fps?: number;
-		}
+		} = {}
 	) {
 		let { width, height, loop, round, border, fps } = options;
 		loop ??= true;
@@ -613,58 +610,42 @@ export default class GifBase {
 	public async render(): Promise<Buffer> {
 		this.applyEdits();
 
-		// GM encoding
-		if (this.options?.gm && isGmInstalled()) {
-			const gif = gm(this.width, this.height).setFormat('gif');
-			// todo: research whether this can be done without disk writes
-			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gif-'));
+		const gif = new GIFEncoder();
 
-			await this.dumpFrames(tempDir);
+		// Find the palette that contains the widest range of colours
+		const frames: Uint8ClampedArray[] = [];
+		const palettes: any[][][] = [];
 
-			for (const file of fs.readdirSync(tempDir).sort((a, b) =>
-				a.localeCompare(b, undefined, {
-					numeric: true,
-					sensitivity: 'base',
-				})
-			)) {
-				gif.in(path.join(tempDir, file));
-			}
+		for (const frame of this.frames) {
+			const data = await frame.getPixelData();
 
-			gif.delay(this.delay / 10);
-
-			return new Promise<Buffer>((resolve, reject) =>
-				gif.toBuffer((err, buffer) => {
-					fs.rmSync(tempDir, { recursive: true, force: true });
-
-					if (err) reject(err);
-					else resolve(buffer);
-				})
-			);
+			frames.push(data);
+			palettes.push(quantize(data, 256));
 		}
 
-		// Backup GIF encoding
-		// todo: remove the need for this, bundle gm in with the package
-		else {
-			const gif = new GifEncoder(this.width, this.height);
+		let chosenPalette = null;
+		let chosenPaletteRange = 0;
 
-			if (this.options?.gm && this.options?.verbose) {
-				console.log(
-					'You have the gm option enabled, but I can not seem to find GraphicsMagick installed on your system! Please make sure that it is accessible in your PATH (:'
-				);
+		for (const palette of palettes) {
+			const summed = palette.map((e) => e.reduce((a, b) => a + b));
+			const range = summed[summed.length - 1] - summed[0];
+
+			if (range > chosenPaletteRange) {
+				chosenPalette = palette;
+				chosenPaletteRange = range;
 			}
-
-			gif.setDelay(this.delay);
-			gif.setRepeat(this.repeat === 'forever' ? 0 : this.repeat);
-			gif.start();
-
-			for (const frame of this.frames) {
-				gif.addFrame(await frame.getPixelData());
-			}
-
-			gif.finish();
-
-			return gif.out.getData();
 		}
+
+		for (const frame of frames) {
+			const index = applyPalette(frame, chosenPalette);
+			gif.writeFrame(index, this.width, this.height, {
+				palette: chosenPalette,
+			});
+		}
+
+		gif.finish();
+
+		return Buffer.from(gif.bytes());
 	}
 
 	/**
