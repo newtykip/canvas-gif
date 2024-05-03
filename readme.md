@@ -10,6 +10,9 @@
 
 canvas-gif is an NPM library that allows you to manipulate the frames of GIFs using [node-canvas](https://github.com/Automattic/node-canvas).
 
+**canvas-gif has been deprecated.**
+I seldom use Node.js, let alone do I have a use for a package like this. If you are interested in taking over development, feel free to fork it and publish it yourself. My time with this library, however, has come to a halt.
+
 ### How does it work?
 
 It works by following these instructions:
@@ -50,7 +53,7 @@ All of these options are optional! _wow_
 
 This error happens if the coalescing option is enabled but you are missing GraphicsMagick. Please install it from [here](http://www.graphicsmagick.org/download.html) and if the error persists feel free to report it as a problem and I'll try my best to help!
 
-<sub>See the code's license <a href="license.md">here.</sub>
+<sub>this project uses the <a href="license.md">opinionated queer license v1.1</a> - tl;dr see <a href="https://oql.avris.it/license.tldr">here</a> :]</sub>
 
 ### To-do
 

@@ -1,6 +1,6 @@
-# 🏳️‍🌈 Opinionated Queer License v1.0
+# 🏳️‍🌈 Opinionated Queer License v1.1
 
-© Copyright newtykins
+© Copyright [newt](https://newty.dev)
 
 ## Permissions
 
@@ -12,7 +12,8 @@ subject to the following conditions:
 ## Obligations
 
 The User must give appropriate credit to the Licensor,
-provide a copy of this license or a (clickable, if the medium allows) link to [oql.avris.it](https://oql.avris.it),
+provide a copy of this license or a (clickable, if the medium allows) link to
+[oql.avris.it/license/v1.1](https://oql.avris.it/license/v1.1),
 and indicate whether and what kind of changes were made.
 The User may do so in any reasonable manner,
 but not in any way that suggests the Licensor endorses the User or their use.
@@ -35,9 +36,10 @@ may use the Work for any reason.
 No private business run for profit with more than a thousand employees
 may use the Work for any reason.
 
-Unless the User has made substantial changes in the Work,
+Unless the User has made substantial changes to the Work,
 or uses it only as a part of a new work (eg. as a library, as a part of an anthology, etc.),
 they are prohibited from selling the Work.
+That prohibition includes processing the Work with machine learning models.
 
 ## Sanctions
 
